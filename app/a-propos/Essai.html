@@ -1,0 +1,178 @@
+import Footer from "@/src/components/Footer";
+import Header from "@/src/components/Header";
+import React from "react";
+
+export default function APropos() {
+  return (
+    <div className="relative min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+      <Header className="relative z-20" />
+
+      {/* Vidéo en background avec overlay amélioré */}
+      <div className="fixed inset-0 z-0">
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute top-0 left-0 w-full h-full object-cover"
+          aria-label="Vidéo de fond montrant des paysages naturels"
+        >
+          <source
+            src="https://videos.pexels.com/video-files/3042473/3042473-uhd_2560_1440_30fps.mp4"
+            type="video/mp4"
+          />
+        </video>
+        <div
+          className="absolute inset-0 bg-gradient-to-b from-black/60 to-black/40 backdrop-blur-sm"
+          aria-hidden="true"
+        ></div>
+      </div>
+
+      {/* Contenu principal avec meilleure structure et accessibilité */}
+      <main className="relative z-10 container mx-auto px-4 py-16 sm:py-24">
+        <div className="max-w-4xl mx-auto bg-white/95 rounded-2xl shadow-xl p-8 sm:p-12 backdrop-blur-md">
+          <header className="text-center mb-12">
+            <h1 className="text-5xl font-bold text-gray-800 mb-6 tracking-tight">
+              À propos d'Animania
+            </h1>
+            <p className="text-xl text-gray-600 leading-relaxed max-w-3xl mx-auto">
+              Bienvenue sur{" "}
+              <span className="text-green-600 font-semibold">Animania</span>,
+              votre destination pour le développement web et la technologie.
+            </p>
+          </header>
+
+          <section className="prose prose-lg max-w-none">
+            <p className="text-gray-700 leading-relaxed">
+              Notre blog est créé par quatre étudiants en ingénierie
+              informatique passionnés par la technologie et le développement
+              web. Notre stack technique comprend
+              <span className="inline-flex items-center px-3 py-1 mx-1 rounded-full bg-green-100 text-green-800 text-sm font-medium">
+                Next.js
+              </span>
+              <span className="inline-flex items-center px-3 py-1 mx-1 rounded-full bg-green-100 text-green-800 text-sm font-medium">
+                MongoDB
+              </span>
+              <span className="inline-flex items-center px-3 py-1 mx-1 rounded-full bg-green-100 text-green-800 text-sm font-medium">
+                Tailwind CSS
+              </span>
+            </p>
+          </section>
+
+          <section className="mt-16">
+            <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center">
+              L'équipe d'Animania
+            </h2>
+
+            <div className="grid md:grid-cols-2 gap-8">
+              {/* Carte de membre d'équipe */}
+              <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
+                <div className="flex items-center mb-4">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                    <span className="text-2xl text-green-600">M</span>
+                  </div>
+                  <div className="ml-4">
+                    <h3 className="text-xl font-semibold text-gray-800">
+                      Mehdi
+                    </h3>
+                    <p className="text-green-600">Développeur Backend</p>
+                  </div>
+                </div>
+                <p className="text-gray-600">
+                  Expert en MongoDB et APIs Next.js, passionné par
+                  l'optimisation et la performance des systèmes.
+                </p>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
+                <div className="flex items-center mb-4">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                    <span className="text-2xl text-green-600">G</span>
+                  </div>
+                  <div className="ml-4">
+                    <h3 className="text-xl font-semibold text-gray-800">
+                      Geremy
+                    </h3>
+                    <p className="text-green-600">Développeur Backend</p>
+                  </div>
+                </div>
+                <p className="text-gray-600">
+                  Spécialiste des structures de données et de la sécurité des
+                  APIs.
+                </p>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
+                <div className="flex items-center mb-4">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                    <span className="text-2xl text-green-600">K</span>
+                  </div>
+                  <div className="ml-4">
+                    <h3 className="text-xl font-semibold text-gray-800">
+                      Kelly
+                    </h3>
+                    <p className="text-green-600">Développeuse Frontend</p>
+                  </div>
+                </div>
+                <p className="text-gray-600">
+                  Créatrice d'interfaces utilisateur intuitives et attractives.
+                </p>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
+                <div className="flex items-center mb-4">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                    <span className="text-2xl text-green-600">S</span>
+                  </div>
+                  <div className="ml-4">
+                    <h3 className="text-xl font-semibold text-gray-800">
+                      Sébastien
+                    </h3>
+                    <p className="text-green-600">Développeur Frontend</p>
+                  </div>
+                </div>
+                <p className="text-gray-600">
+                  Expert en animations et design responsive.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section className="mt-16">
+            <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center">
+              Notre Vision
+            </h2>
+            <div className="bg-green-50 rounded-xl p-8">
+              <p className="text-gray-700 leading-relaxed mb-6">
+                Animania est né de notre passion pour le partage de
+                connaissances et l'apprentissage continu. Notre plateforme
+                combine les meilleures technologies modernes pour offrir une
+                expérience exceptionnelle.
+              </p>
+              <p className="text-gray-700 leading-relaxed">
+                Nous croyons en la puissance de la communauté et du partage de
+                connaissances pour faire progresser le monde du développement
+                web.
+              </p>
+            </div>
+          </section>
+
+          <section className="mt-16 text-center">
+            <h2 className="text-3xl font-bold text-gray-800 mb-8">
+              Rejoignez l'aventure
+            </h2>
+            <div className="flex justify-center gap-4">
+              <button className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                S'inscrire à la newsletter
+              </button>
+              <button className="px-6 py-3 border-2 border-green-600 text-green-600 rounded-lg hover:bg-green-50 transition-colors">
+                Nous contacter
+              </button>
+            </div>
+          </section>
+        </div>
+      </main>
+      <Footer />
+    </div>
+  );
+}
