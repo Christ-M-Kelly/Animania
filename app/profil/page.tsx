@@ -4,6 +4,14 @@ import Footer from "@/src/components/Footer";
 import Header from "@/src/components/Header";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import {
+  FiEdit,
+  FiEye,
+  FiLogOut,
+  FiPlusCircle,
+  FiTrash2,
+  FiUser,
+} from "react-icons/fi";
 
 interface User {
   id: string;
@@ -83,7 +91,6 @@ export default function ProfilPage() {
         console.error("❌ Erreur vérification auth:", error);
         setError("Erreur de vérification de l'authentification");
         setLoading(false);
-        // En cas d'erreur réseau, on peut donner une seconde chance
         setTimeout(() => {
           router.push("/connexion");
         }, 2000);
@@ -106,15 +113,13 @@ export default function ProfilPage() {
 
       if (response.ok) {
         const data = await response.json();
-
-        // Utiliser les données séparées
         const publishedPosts = data.posts || [];
         const draftPosts = data.drafts || [];
 
         setPublishedPosts(publishedPosts);
         setDraftPosts(draftPosts);
 
-        console.log("📊 Posts chargés (nouvelles tables):", {
+        console.log("📊 Posts chargés:", {
           published: publishedPosts.length,
           drafts: draftPosts.length,
         });
@@ -139,10 +144,7 @@ export default function ProfilPage() {
       localStorage.getItem("token") || sessionStorage.getItem("token");
 
     try {
-      // Utiliser la bonne API selon le type
       const apiUrl = isDraft ? `/api/drafts/${postId}` : `/api/posts/${postId}`;
-
-      console.log(`🗑️ Suppression ${itemType}:`, { postId, isDraft, apiUrl });
 
       const response = await fetch(apiUrl, {
         method: "DELETE",
@@ -152,16 +154,8 @@ export default function ProfilPage() {
         },
       });
 
-      console.log("📡 Réponse suppression:", {
-        status: response.status,
-        statusText: response.statusText,
-        ok: response.ok,
-      });
-
       if (response.ok) {
-        // Recharger les posts après suppression réussie
         loadUserPosts(token!);
-
         setMessage({
           type: "success",
           text: `${
@@ -170,22 +164,14 @@ export default function ProfilPage() {
         });
         setTimeout(() => setMessage(null), 3000);
       } else {
-        // Gestion sécurisée des erreurs JSON
         let errorMessage = `Erreur lors de la suppression du ${itemType}`;
-
         try {
           const contentType = response.headers.get("content-type");
           if (contentType && contentType.includes("application/json")) {
             const errorData = await response.json();
             errorMessage = errorData.error || errorMessage;
-          } else {
-            // Si ce n'est pas du JSON, lire le texte
-            const errorText = await response.text();
-            errorMessage =
-              errorText || `Erreur ${response.status}: ${response.statusText}`;
           }
         } catch (parseError) {
-          console.error("❌ Erreur lors du parsing de la réponse:", parseError);
           errorMessage = `Erreur ${response.status}: ${response.statusText}`;
         }
 
@@ -215,7 +201,6 @@ export default function ProfilPage() {
     router.push("/connexion");
   };
 
-  // Fonction pour publier un brouillon :
   const publishDraft = async (draftId: string) => {
     const token =
       localStorage.getItem("token") || sessionStorage.getItem("token");
@@ -230,7 +215,6 @@ export default function ProfilPage() {
       });
 
       if (response.ok) {
-        // Recharger les posts
         loadUserPosts(token!);
         setMessage({ type: "success", text: "Brouillon publié avec succès" });
         setTimeout(() => setMessage(null), 3000);
@@ -252,15 +236,11 @@ export default function ProfilPage() {
   // Affichage pendant le chargement
   if (loading) {
     return (
-      <div className="flex min-h-screen flex-col">
-        <Header />
-        <main className="flex grow items-center justify-center">
-          <div className="text-center">
-            <div className="mx-auto mb-4 size-12 animate-spin rounded-full border-b-2 border-green-600"></div>
-            <p className="text-gray-600">Chargement du profil...</p>
-          </div>
-        </main>
-        <Footer />
+      <div className="flex min-h-screen items-center justify-center bg-green-50">
+        <div className="text-center">
+          <div className="mx-auto mb-4 size-12 animate-spin rounded-full border-4 border-green-600"></div>
+          <p className="text-gray-600">Chargement du profil...</p>
+        </div>
       </div>
     );
   }
@@ -268,22 +248,17 @@ export default function ProfilPage() {
   // Affichage en cas d'erreur
   if (error && !user) {
     return (
-      <div className="flex min-h-screen flex-col">
-        <Header />
-        <main className="flex grow items-center justify-center">
-          <div className="text-center">
-            <p className="mb-4 text-red-600">{error}</p>
-            <p className="text-gray-600">Redirection vers la connexion...</p>
-          </div>
-        </main>
-        <Footer />
+      <div className="flex min-h-screen items-center justify-center bg-green-50">
+        <div className="text-center">
+          <p className="mb-4 text-red-600">{error}</p>
+          <p className="text-gray-600">Redirection vers la connexion...</p>
+        </div>
       </div>
     );
   }
 
-  // Affichage du profil si tout va bien
   if (!user) {
-    return null; // Éviter le flash pendant la redirection
+    return null;
   }
 
   return (
@@ -313,186 +288,173 @@ export default function ProfilPage() {
         </div>
       )}
 
-      <main className="container mx-auto grow px-4 py-8">
-        <div className="mx-auto max-w-6xl">
-          {/* Section Profil */}
-          <div className="mb-8 overflow-hidden rounded-lg bg-white shadow-lg">
-            <div className="bg-gradient-to-r from-green-600 to-green-800 px-6 py-8">
-              <h1 className="text-3xl font-bold text-white">Mon Profil</h1>
-              <p className="mt-2 text-green-100">
-                Gérez vos informations personnelles
-              </p>
-            </div>
-
-            <div className="p-6">
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    Nom
-                  </label>
-                  <p className="rounded-lg bg-gray-50 p-3 text-lg text-gray-900">
-                    {user.name}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    Email
-                  </label>
-                  <p className="rounded-lg bg-gray-50 p-3 text-lg text-gray-900">
-                    {user.email}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    Rôle
-                  </label>
-                  <p className="rounded-lg bg-gray-50 p-3 text-lg text-gray-900">
-                    {user.role}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    Membre depuis
-                  </label>
-                  <p className="rounded-lg bg-gray-50 p-3 text-lg text-gray-900">
-                    {new Date(user.createdAt).toLocaleDateString("fr-FR", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </p>
-                </div>
+      {/* Design moderne adapté */}
+      <main className="min-h-screen grow bg-green-50 dark:bg-gray-900">
+        <div className="container mx-auto p-4 py-12 md:p-8">
+          {/* En-tête profil moderne */}
+          <header className="mb-10 flex flex-col items-center justify-between border-b border-green-200 pb-8 md:flex-row md:space-y-0">
+            <div className="flex items-center space-x-4">
+              <div className="flex size-20 items-center justify-center rounded-full bg-green-500 text-white shadow-md">
+                <FiUser size={36} />
               </div>
-
-              <div className="mt-8 flex space-x-4">
-                <button
-                  onClick={() => router.push("/profil/formulaire_post")}
-                  className="rounded-lg bg-green-600 px-6 py-3 text-white transition-colors duration-300 hover:bg-green-700"
-                >
-                  Créer un article
-                </button>
-
-                <button
-                  onClick={handleLogout}
-                  className="rounded-lg bg-red-600 px-6 py-3 text-white transition-colors duration-300 hover:bg-red-700"
-                >
-                  Se déconnecter
-                </button>
+              <div>
+                <h1 className="text-3xl font-bold text-green-800 dark:text-green-100">
+                  Bonjour, {user.name}
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400">{user.email}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Membre depuis{" "}
+                  {new Date(user.createdAt).toLocaleDateString("fr-FR", {
+                    year: "numeric",
+                    month: "long",
+                  })}
+                </p>
               </div>
             </div>
-          </div>
+            <button
+              onClick={handleLogout}
+              className="mt-6 flex items-center space-x-2 rounded-xl bg-red-600 px-4 py-2 text-white shadow-md transition-colors duration-200 hover:bg-red-700 md:mt-0"
+            >
+              <FiLogOut />
+              <span>Déconnexion</span>
+            </button>
+          </header>
 
-          {/* Section Mes Articles avec Onglets */}
-          <div className="overflow-hidden rounded-lg bg-white shadow-lg">
-            <div className="bg-gradient-to-r from-blue-600 to-blue-800 p-6">
-              <h2 className="text-2xl font-bold text-white">Mes Articles</h2>
-              <div className="mt-4 flex space-x-4">
-                <button
-                  onClick={() => setActiveTab("published")}
-                  className={`rounded-lg px-4 py-2 transition-colors duration-300 ${
-                    activeTab === "published"
-                      ? "bg-white font-semibold text-blue-800"
-                      : "bg-blue-700 text-blue-100 hover:bg-blue-600"
-                  }`}
-                >
-                  Publiés ({publishedPosts.length})
-                </button>
-                <button
-                  onClick={() => setActiveTab("drafts")}
-                  className={`rounded-lg px-4 py-2 transition-colors duration-300 ${
-                    activeTab === "drafts"
-                      ? "bg-white font-semibold text-blue-800"
-                      : "bg-blue-700 text-blue-100 hover:bg-blue-600"
-                  }`}
-                >
-                  Brouillons ({draftPosts.length})
-                </button>
+          {/* Tableau de bord contributeur */}
+          <section className="mb-10 rounded-xl bg-white p-6 shadow-xl dark:bg-gray-800">
+            <h2 className="mb-6 text-xl font-semibold text-green-700 dark:text-green-200">
+              Tableau de bord Contributeur
+            </h2>
+            <div className="flex flex-col space-y-4 md:flex-row md:space-x-4 md:space-y-0">
+              {/* Bouton CTA principal en AMBRE */}
+              <button
+                onClick={() => router.push("/profil/formulaire_post")}
+                className="flex-1 rounded-xl bg-amber-600 p-6 text-white shadow-lg transition-all duration-300 hover:bg-amber-700 md:p-8"
+              >
+                <div className="flex items-center space-x-3">
+                  <FiPlusCircle size={24} />
+                  <span className="text-lg font-medium">
+                    Créer un nouvel article
+                  </span>
+                </div>
+                <p className="mt-1 text-sm opacity-90">
+                  Commencez à rédiger et partagez votre expertise animale.
+                </p>
+              </button>
+
+              <div className="flex-1 rounded-xl border border-green-200 bg-green-50 p-6 shadow-lg md:p-8 dark:border-gray-700 dark:bg-gray-700">
+                <h3 className="text-xl font-bold text-green-800 dark:text-green-100">
+                  {publishedPosts.length + draftPosts.length} Articles
+                </h3>
+                <p className="text-green-600 dark:text-green-300">
+                  {publishedPosts.length} publiés / {draftPosts.length} en
+                  brouillon
+                </p>
               </div>
             </div>
+          </section>
 
-            <div className="p-6">
-              {loadingPosts ? (
-                <div className="py-8 text-center">
-                  <div className="mx-auto mb-4 size-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
-                  <p className="text-gray-600">Chargement des articles...</p>
-                </div>
-              ) : (
-                <>
-                  {/* Articles Publiés */}
-                  {activeTab === "published" && (
-                    <>
-                      {publishedPosts.length === 0 ? (
-                        <div className="py-12 text-center">
-                          <div className="mb-4 text-6xl">📝</div>
-                          <h3 className="mb-2 text-xl font-semibold text-gray-700">
-                            Aucun article publié
-                          </h3>
-                          <p className="mb-6 text-gray-500">
-                            Commencez par créer votre premier article
-                          </p>
-                          <button
-                            onClick={() =>
-                              router.push("/profil/formulaire_post")
-                            }
-                            className="rounded-lg bg-green-600 px-6 py-3 text-white transition-colors duration-300 hover:bg-green-700"
-                          >
-                            Créer mon premier article
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                          {publishedPosts.map((post) => (
-                            <PostCard
-                              key={post.id}
-                              post={post}
-                              onDelete={deletePost}
-                              onEdit={editPost}
-                              router={router}
-                              showPublishButton={false}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  )}
+          {/* Section articles avec onglets */}
+          <section className="rounded-xl bg-white p-6 shadow-xl dark:bg-gray-800">
+            <h2 className="mb-6 text-2xl font-semibold text-green-700 dark:text-green-200">
+              Mes Articles Rédigés
+            </h2>
 
-                  {/* Brouillons */}
-                  {activeTab === "drafts" && (
-                    <>
-                      {draftPosts.length === 0 ? (
-                        <div className="py-12 text-center">
-                          <div className="mb-4 text-6xl">📄</div>
-                          <h3 className="mb-2 text-xl font-semibold text-gray-700">
-                            Aucun brouillon
-                          </h3>
-                          <p className="mb-6 text-gray-500">
-                            Vos brouillons apparaîtront ici
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                          {draftPosts.map((post) => (
-                            <PostCard
-                              key={post.id}
-                              post={post}
-                              onDelete={deletePost}
-                              onEdit={editPost}
-                              onPublish={publishDraft}
-                              router={router}
-                              showPublishButton={true}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </>
-              )}
+            {/* Onglets */}
+            <div className="mb-6 flex space-x-4">
+              <button
+                onClick={() => setActiveTab("published")}
+                className={`rounded-lg px-4 py-2 transition-colors duration-300 ${
+                  activeTab === "published"
+                    ? "bg-green-600 font-semibold text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                Publiés ({publishedPosts.length})
+              </button>
+              <button
+                onClick={() => setActiveTab("drafts")}
+                className={`rounded-lg px-4 py-2 transition-colors duration-300 ${
+                  activeTab === "drafts"
+                    ? "bg-amber-600 font-semibold text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                Brouillons ({draftPosts.length})
+              </button>
             </div>
-          </div>
+
+            {/* Contenu des onglets */}
+            {loadingPosts ? (
+              <div className="py-8 text-center">
+                <div className="mx-auto mb-4 size-8 animate-spin rounded-full border-4 border-green-600"></div>
+                <p className="text-gray-600">Chargement des articles...</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {activeTab === "published" && (
+                  <>
+                    {publishedPosts.length > 0 ? (
+                      publishedPosts.map((post) => (
+                        <PostCardModern
+                          key={post.id}
+                          post={post}
+                          onDelete={deletePost}
+                          onEdit={editPost}
+                          router={router}
+                          showPublishButton={false}
+                        />
+                      ))
+                    ) : (
+                      <div className="py-8 text-center">
+                        <div className="mb-4 text-6xl">📝</div>
+                        <h3 className="mb-2 text-xl font-semibold text-gray-700">
+                          Aucun article publié
+                        </h3>
+                        <p className="mb-6 text-gray-500">
+                          Commencez par créer votre premier article
+                        </p>
+                        <button
+                          onClick={() => router.push("/profil/formulaire_post")}
+                          className="rounded-lg bg-green-600 px-6 py-3 text-white transition-colors duration-300 hover:bg-green-700"
+                        >
+                          Créer mon premier article
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {activeTab === "drafts" && (
+                  <>
+                    {draftPosts.length > 0 ? (
+                      draftPosts.map((post) => (
+                        <PostCardModern
+                          key={post.id}
+                          post={post}
+                          onDelete={deletePost}
+                          onEdit={editPost}
+                          onPublish={publishDraft}
+                          router={router}
+                          showPublishButton={true}
+                        />
+                      ))
+                    ) : (
+                      <div className="py-8 text-center">
+                        <div className="mb-4 text-6xl">📄</div>
+                        <h3 className="mb-2 text-xl font-semibold text-gray-700">
+                          Aucun brouillon
+                        </h3>
+                        <p className="mb-6 text-gray-500">
+                          Vos brouillons apparaîtront ici
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </section>
         </div>
       </main>
       <Footer />
@@ -500,25 +462,24 @@ export default function ProfilPage() {
   );
 }
 
-// Ajoutez ce composant PostCard à la fin du fichier :
-
-interface PostCardProps {
+// Composant PostCard moderne
+interface PostCardModernProps {
   post: Post;
-  onDelete: (id: string, isDraft?: boolean) => void; // ← Ajouter le paramètre isDraft
+  onDelete: (id: string, isDraft?: boolean) => void;
   onEdit: (id: string) => void;
   onPublish?: (id: string) => void;
   router: any;
   showPublishButton: boolean;
 }
 
-function PostCard({
+function PostCardModern({
   post,
   onDelete,
   onEdit,
   onPublish,
   router,
   showPublishButton,
-}: PostCardProps) {
+}: PostCardModernProps) {
   const getCategoryDisplayName = (category: string) => {
     const categoryNames: { [key: string]: string } = {
       TERRESTRES: "Animaux Terrestres",
@@ -529,98 +490,67 @@ function PostCard({
     return categoryNames[category] || category;
   };
 
-  const getCategoryColor = (category: string) => {
-    const colors: { [key: string]: string } = {
-      TERRESTRES: "bg-green-100 text-green-800",
-      MARINS: "bg-blue-100 text-blue-800",
-      AERIENS: "bg-sky-100 text-sky-800",
-      EAU_DOUCE: "bg-teal-100 text-teal-800",
-    };
-    return colors[category] || "bg-gray-100 text-gray-800";
-  };
-
-  // Déterminer si c'est un brouillon
   const isDraft = post.published === false;
 
   return (
-    <div className="overflow-hidden rounded-lg border border-gray-200 transition-shadow duration-300 hover:shadow-lg">
-      {post.imageUrl && (
-        <div className="h-48 overflow-hidden bg-gray-100">
-          <img
-            src={post.imageUrl}
-            alt={post.title}
-            className="size-full object-cover"
-          />
-        </div>
-      )}
-
-      <div className="p-4">
-        <div className="mb-2 flex items-start justify-between">
-          <span
-            className={`rounded-full px-2 py-1 text-xs font-semibold uppercase tracking-wide ${getCategoryColor(
-              post.category
-            )}`}
-          >
-            {getCategoryDisplayName(post.category)}
-          </span>
-          <span
-            className={`rounded-full px-2 py-1 text-xs font-medium ${
-              post.published === true
-                ? "border border-green-300 bg-green-100 text-green-800"
-                : "border border-yellow-300 bg-yellow-100 text-yellow-800"
-            }`}
-          >
-            {post.published === true ? "✅ Publié" : "📝 Brouillon"}
-          </span>
-        </div>
-
-        <h3 className="mb-2 line-clamp-2 text-lg font-bold text-gray-900">
+    <div className="flex flex-col justify-between rounded-xl border border-gray-100 p-4 shadow-sm transition-shadow duration-200 hover:shadow-md md:flex-row md:items-center md:space-x-4 dark:border-gray-700 dark:bg-gray-700">
+      <div className="flex-1">
+        <h3 className="text-lg font-bold text-gray-800 dark:text-white">
           {post.title}
         </h3>
-
-        <p className="mb-3 line-clamp-3 text-sm text-gray-600">
-          {post.excerpt}
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          {getCategoryDisplayName(post.category)} • Créé le :{" "}
+          {new Date(post.createdAt).toLocaleDateString()}
         </p>
+        
+      </div>
 
-        <div className="mb-4 text-xs text-gray-500">
-          Créé le {new Date(post.createdAt).toLocaleDateString("fr-FR")}
-          {isDraft && (
-            <span className="mt-1 block font-medium text-yellow-600">
-              📝 En attente de publication
-            </span>
+      <div className="mt-3 flex items-center space-x-3 md:mt-0">
+        <span
+          className={`rounded-full px-3 py-1 text-xs font-semibold ${
+            post.published
+              ? "bg-green-100 text-green-800"
+              : "bg-amber-100 text-amber-800"
+          }`}
+        >
+          {post.published ? "✅ Publié" : "📝 Brouillon"}
+        </span>
+
+        {/* Actions */}
+        <div className="flex space-x-2">
+          {post.published && (
+            <button
+              onClick={() => router.push(`/posts/${post.id}`)}
+              className="rounded-lg bg-blue-500 p-2 text-white transition-colors duration-200 hover:bg-blue-600"
+              title="Voir l'article"
+            >
+              <FiEye size={18} />
+            </button>
           )}
-        </div>
 
-        <div className="flex flex-col space-y-2">
-          <div className="flex space-x-2">
-            {post.published === true && (
-              <button
-                onClick={() => router.push(`/posts/${post.id}`)}
-                className="flex-1 rounded bg-blue-600 px-3 py-2 text-sm text-white transition-colors duration-300 hover:bg-blue-700"
-              >
-                Voir
-              </button>
-            )}
-            <button
-              onClick={() => onEdit(post.id)}
-              className="flex-1 rounded bg-amber-600 px-3 py-2 text-sm text-white transition-colors duration-300 hover:bg-amber-700"
-            >
-              Modifier
-            </button>
-            <button
-              onClick={() => onDelete(post.id, isDraft)} // ← Passer le type
-              className="flex-1 rounded bg-red-600 px-3 py-2 text-sm text-white transition-colors duration-300 hover:bg-red-700"
-            >
-              Supprimer
-            </button>
-          </div>
+          <button
+            onClick={() => onEdit(post.id)}
+            className="rounded-lg bg-amber-500 p-2 text-white transition-colors duration-200 hover:bg-amber-600"
+            title="Modifier"
+          >
+            <FiEdit size={18} />
+          </button>
+
+          <button
+            onClick={() => onDelete(post.id, isDraft)}
+            className="rounded-lg bg-red-500 p-2 text-white transition-colors duration-200 hover:bg-red-600"
+            title="Supprimer"
+          >
+            <FiTrash2 size={18} />
+          </button>
 
           {showPublishButton && onPublish && isDraft && (
             <button
               onClick={() => onPublish(post.id)}
-              className="w-full rounded bg-green-600 px-3 py-2 text-sm font-medium text-white transition-colors duration-300 hover:bg-green-700"
+              className="rounded-lg bg-green-500 p-2 text-white transition-colors duration-200 hover:bg-green-600"
+              title="Publier"
             >
-              📢 Publier maintenant
+              <FiPlusCircle size={18} />
             </button>
           )}
         </div>
@@ -628,3 +558,4 @@ function PostCard({
     </div>
   );
 }
+

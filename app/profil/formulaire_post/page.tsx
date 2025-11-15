@@ -1,319 +1,595 @@
 "use client";
 
+import { handleUpload } from "@/app/upload/uploadActions";
 import Footer from "@/src/components/Footer";
 import Header from "@/src/components/Header";
-import { Editor, EditorContent, useEditor } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-enum AnimalCategory {
-  TERRESTRES = "TERRESTRES",
-  MARINS = "MARINS",
-  AERIENS = "AERIENS",
-  EAU_DOUCE = "EAU_DOUCE",
+interface FormData {
+  title: string;
+  content: string;
+  excerpt: string;
+  category: string;
+  imageUrl: string;
 }
 
-const MenuBar = ({ editor }: { editor: Editor | null }) => {
-  if (!editor) {
-    return null;
-  }
+interface User {
+  id: string;
+  name: string;
+  email: string;
+}
 
-  return (
-    <div className="flex gap-2 border-b p-2">
-      <button
-        type="button"
-        onClick={() => editor.chain().focus().toggleBold().run()}
-        className={editor.isActive("bold") ? "rounded bg-gray-200 p-1" : "p-1"}
-      >
-        Gras
-      </button>
-      <button
-        type="button"
-        onClick={() => editor.chain().focus().toggleItalic().run()}
-        className={
-          editor.isActive("italic") ? "rounded bg-gray-200 p-1" : "p-1"
-        }
-      >
-        Italique
-      </button>
-      <button
-        type="button"
-        onClick={() => editor.chain().focus().toggleBulletList().run()}
-        className={
-          editor.isActive("bulletList") ? "rounded bg-gray-200 p-1" : "p-1"
-        }
-      >
-        Liste
-      </button>
-    </div>
-  );
-};
+const categories = [
+  { value: "TERRESTRES", label: "Animaux Terrestres" },
+  { value: "AERIENS", label: "Animaux Aériens" },
+  { value: "MARINS", label: "Animaux Marins" },
+  { value: "EAU_DOUCE", label: "Animaux d'Eau Douce" },
+  { value: "DOMESTIQUES", label: "Animaux Domestiques" },
+];
 
-export default function FormulairePage() {
-  const router = useRouter();
-  const [title, setTitle] = useState("");
-  const [file, setFile] = useState<File>();
-  const [loading, setLoading] = useState(false);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [category, setCategory] = useState<AnimalCategory>(
-    AnimalCategory.TERRESTRES
-  );
-  const [message, setMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
-  const [isDraft, setIsDraft] = useState(false);
-
-  const editor = useEditor({
-    extensions: [StarterKit],
+export default function FormulairePost() {
+  const [formData, setFormData] = useState<FormData>({
+    title: "",
     content: "",
+    excerpt: "",
+    category: "",
+    imageUrl: "",
   });
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      setFile(selectedFile);
-      const previewUrl = URL.createObjectURL(selectedFile);
-      setPreview(previewUrl);
+  const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
+
+  // Vérification d'authentification non bloquante
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        console.log("🔍 Vérification de l'authentification...");
+
+        const response = await fetch("/api/auth/verify", {
+          method: "GET",
+          credentials: "include",
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.user) {
+            setCurrentUser(result.user);
+            console.log("✅ Utilisateur authentifié:", result.user);
+          } else {
+            console.log("ℹ️ Pas d'utilisateur connecté - mode anonyme");
+          }
+        } else {
+          console.log("ℹ️ Auth non disponible - mode anonyme");
+        }
+      } catch (error: any) {
+        console.log("ℹ️ Erreur auth, passage en mode anonyme:", error.message);
+      } finally {
+        setAuthChecked(true);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  const handleInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const validateForm = (): string | null => {
+    if (!formData.title.trim()) return "Le titre est requis";
+    if (formData.title.length < 5)
+      return "Le titre doit contenir au moins 5 caractères";
+    if (!formData.content.trim()) return "Le contenu est requis";
+    if (formData.content.length < 50)
+      return "Le contenu doit contenir au moins 50 caractères";
+    if (!formData.category) return "Veuillez sélectionner une catégorie";
+    return null;
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setError("Veuillez sélectionner une image valide");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError("L'image ne doit pas dépasser 5MB");
+      return;
+    }
+
+    setUploadingImage(true);
+    setError(null);
+
+    try {
+      console.log("📤 Upload de l'image:", file.name);
+      const result = await handleUpload({
+        file: file,
+        input: { type: "post-image" },
+      });
+
+      if (result.url) {
+        setFormData((prev) => ({ ...prev, imageUrl: result.url }));
+        console.log("✅ Image uploadée:", result.url);
+      } else {
+        throw new Error("URL d'image manquante");
+      }
+    } catch (error: any) {
+      console.error("❌ Erreur upload:", error);
+      setError(`Erreur lors de l'upload: ${error.message}`);
+    } finally {
+      setUploadingImage(false);
     }
   };
 
-  useEffect(() => {
-    return () => {
-      if (preview) {
-        URL.revokeObjectURL(preview);
-      }
-    };
-  }, [preview]);
+  const removeImage = () => {
+    setFormData((prev) => ({ ...prev, imageUrl: "" }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
-  const handleSubmit = async (e: React.FormEvent, saveAsDraft = false) => {
-    e.preventDefault();
-    setLoading(true);
+  // Fonction pour obtenir ou créer un utilisateur
+  const getOrCreateAuthor = async (): Promise<string> => {
+    // Si utilisateur connecté, utiliser son ID
+    if (currentUser) {
+      return currentUser.id;
+    }
+
+    // Sinon, créer un utilisateur temporaire
+    console.log("👤 Création d'un utilisateur temporaire...");
 
     try {
-      const token =
-        localStorage.getItem("token") || sessionStorage.getItem("token");
-
-      if (!token) {
-        throw new Error("Vous devez être connecté pour publier un article");
-      }
-
-      console.log(
-        "📤 Mode sauvegarde:",
-        saveAsDraft ? "BROUILLON" : "PUBLICATION"
-      );
-
-      const formData = new FormData();
-      formData.append("title", title);
-      formData.append("content", editor?.getHTML() || "");
-      formData.append("category", category);
-      formData.append("isDraft", saveAsDraft.toString()); // ← Correction importante
-
-      if (file) {
-        formData.append("image", file);
-      }
-
-      // Debug pour vérifier les données envoyées
-      console.log("📋 FormData envoyé:", {
-        title,
-        category,
-        isDraft: saveAsDraft,
-        isDraftString: saveAsDraft.toString(),
+      const response = await fetch("/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "Utilisateur Anonyme",
+          email: `anonymous_${Date.now()}@animania.com`,
+        }),
       });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log("✅ Utilisateur temporaire créé:", result.user.id);
+        return result.user.id;
+      } else {
+        throw new Error("Impossible de créer un utilisateur temporaire");
+      }
+    } catch (error: any) {
+      console.error("❌ Erreur création utilisateur:", error);
+      throw new Error("Erreur de création d'utilisateur");
+    }
+  };
+
+  const handleSubmit = async (published: boolean) => {
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      // Obtenir un ID d'auteur (connecté ou temporaire)
+      const authorId = await getOrCreateAuthor();
+
+      console.log("📤 Envoi des données:", {
+        ...formData,
+        published,
+        authorId,
+      });
+
+      const postData = {
+        title: formData.title.trim(),
+        content: formData.content.trim(),
+        excerpt: formData.excerpt.trim() || null,
+        category: formData.category,
+        imageUrl: formData.imageUrl || null,
+        authorId: authorId,
+        published: published,
+      };
 
       const response = await fetch("/api/posts", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
-        body: formData,
+        body: JSON.stringify(postData),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Erreur HTTP: ${response.status} ${errorData.error}`);
+      // Vérifier le content-type avant de parser
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Erreur serveur: réponse invalide");
       }
 
       const result = await response.json();
-      console.log("✅ Réponse reçue:", result);
 
-      setMessage({
-        type: "success",
-        text: saveAsDraft
-          ? "Brouillon sauvegardé avec succès !"
-          : "Article publié avec succès !",
-      });
-      setTimeout(() => {
-        router.push("/");
-        router.refresh();
-      }, 2000);
-    } catch (error) {
-      setMessage({
-        type: "error",
-        text: "Une erreur est survenue lors de la sauvegarde.",
-      });
-      setTimeout(() => setMessage(null), 5000);
-
-      if (error instanceof Error) {
-        console.error("Message d'erreur:", error.message);
+      if (!response.ok) {
+        throw new Error(result.message || `Erreur HTTP: ${response.status}`);
       }
+
+      if (result.success) {
+        const actionText = published ? "publié" : "enregistré en brouillon";
+        setSuccess(`Article ${actionText} avec succès !`);
+
+        // Redirection différée
+        setTimeout(() => {
+          router.push("/articles");
+        }, 2000);
+      } else {
+        throw new Error(result.message || "Erreur lors de la création");
+      }
+    } catch (error: any) {
+      console.error("❌ Erreur:", error);
+      setError(error.message || "Erreur lors de la création de l'article");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    const token =
-      localStorage.getItem("token") || sessionStorage.getItem("token");
-    if (!token) {
-      // Redirection vers la page de connexion
-      window.location.href = "/connexion";
+  const resetForm = () => {
+    setFormData({
+      title: "",
+      content: "",
+      excerpt: "",
+      category: "",
+      imageUrl: "",
+    });
+    setError(null);
+    setSuccess(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
-  }, []);
+  };
+
+  // Affichage pendant la vérification d'auth (court)
+  if (!authChecked) {
+    return (
+      <div className="flex min-h-screen flex-col bg-green-50">
+        <Header />
+        <main className="flex flex-1 items-center justify-center">
+          <div className="text-center">
+            <div className="mx-auto mb-2 size-8 animate-spin rounded-full border-b-2 border-green-600"></div>
+            <p className="text-sm text-gray-600">Initialisation...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col bg-green-50">
       <Header />
-      <main className="grow">
-        {/* Hero Section */}
-        <section className="relative bg-gradient-to-r from-green-600 to-green-800 py-16">
-          <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute inset-0 bg-black opacity-40"></div>
-            <img
-              src="/images/perro.jpg"
-              alt="Animaux sauvages"
-              className="size-full object-cover"
-            />
-          </div>
-          <div className="container relative mx-auto px-4 text-center">
-            <h1 className="mb-4 text-4xl font-bold text-white">
-              Créer un Article
+
+      <main className="flex-1 py-12">
+        <div className="mx-auto max-w-4xl px-4">
+          <div className="mb-8 text-center">
+            <h1 className="mb-4 text-4xl font-bold text-gray-900">
+              ✍️ Créer un article
             </h1>
-            <p className="mx-auto max-w-2xl text-xl text-white">
-              Partagez votre passion pour les animaux à travers un article
-              captivant
+            <p className="text-xl text-gray-600">
+              Partagez vos connaissances sur le monde animal
             </p>
+
+            {/* Affichage du statut d'authentification */}
+            <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
+              {currentUser ? (
+                <p className="text-sm text-blue-700">
+                  🔐 Connecté en tant que : <strong>{currentUser.name}</strong>{" "}
+                  ({currentUser.email})
+                </p>
+              ) : (
+                <p className="text-sm text-blue-700">
+                  👤 Mode anonyme - Votre article sera publié de manière anonyme
+                </p>
+              )}
+            </div>
           </div>
-        </section>
 
-        {/* Formulaire Section */}
-        <section className="bg-gray-50 py-12">
-          <div className="mx-auto max-w-4xl px-4">
-            <div className="rounded-lg bg-white p-8 shadow-lg">
-              <div className="space-y-6">
-                <div>
-                  <label className="mb-2 block font-semibold text-gray-700">
-                    Titre
-                  </label>
-                  <input
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className="w-full rounded-lg border border-gray-300 p-3 focus:border-transparent focus:ring-2 focus:ring-green-500"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block font-semibold text-gray-700">
-                    Catégorie
-                  </label>
-                  <select
-                    value={category}
-                    onChange={(e) =>
-                      setCategory(e.target.value as AnimalCategory)
-                    }
-                    className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:border-transparent focus:ring-2 focus:ring-green-500"
-                    required
-                  >
-                    <option value="">Sélectionnez une catégorie</option>
-                    <option value="TERRESTRES">Animaux Terrestres</option>
-                    <option value="MARINS">Animaux Marins</option>
-                    <option value="AERIENS">Animaux Aériens</option>
-                    <option value="EAU_DOUCE">Animaux d'Eau Douce</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-2 block font-semibold text-gray-700">
-                    Contenu
-                  </label>
-                  <div className="overflow-hidden rounded-lg border">
-                    <MenuBar editor={editor} />
-                    <EditorContent
-                      editor={editor}
-                      className="prose min-h-[300px] max-w-none p-4"
-                    />
+          <div className="rounded-lg bg-white p-8 shadow-lg">
+            {/* Messages de retour */}
+            {error && (
+              <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4">
+                <div className="flex items-center">
+                  <div className="mr-3 text-2xl text-red-600">❌</div>
+                  <div>
+                    <h3 className="font-semibold text-red-800">Erreur</h3>
+                    <p className="text-red-700">{error}</p>
                   </div>
                 </div>
+              </div>
+            )}
 
-                <div>
-                  <label className="mb-2 block font-semibold text-gray-700">
-                    Image
-                  </label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="w-full"
-                  />
-                  {preview && (
-                    <div className="mt-4">
-                      <img
-                        src={preview}
-                        alt="Aperçu"
-                        className="max-h-48 rounded border object-contain"
+            {success && (
+              <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4">
+                <div className="flex items-center">
+                  <div className="mr-3 text-2xl text-green-600">✅</div>
+                  <div>
+                    <h3 className="font-semibold text-green-800">Succès !</h3>
+                    <p className="text-green-700">
+                      {success} Redirection en cours...
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Note d'information pour les utilisateurs non connectés */}
+            {!currentUser && (
+              <div className="mb-6 rounded-lg border border-yellow-200 bg-yellow-50 p-4">
+                <div className="flex items-center">
+                  <div className="mr-3 text-2xl text-yellow-600">ℹ️</div>
+                  <div>
+                    <h3 className="font-semibold text-yellow-800">
+                      Mode anonyme
+                    </h3>
+                    <p className="text-sm text-yellow-700">
+                      Vous n'êtes pas connecté. L'article sera publié de manière
+                      anonyme.
+                      <a
+                        href="/connexion"
+                        className="ml-1 underline hover:text-yellow-900"
+                      >
+                        Se connecter
+                      </a>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <form className="space-y-6">
+              {/* Titre */}
+              <div>
+                <label
+                  htmlFor="title"
+                  className="mb-2 block text-sm font-medium text-gray-700"
+                >
+                  Titre de l'article *
+                </label>
+                <input
+                  type="text"
+                  id="title"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 transition-colors focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200"
+                  placeholder="Ex: Les habitudes fascinantes des dauphins"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  {formData.title.length}/100 caractères
+                </p>
+              </div>
+
+              {/* Catégorie */}
+              <div>
+                <label
+                  htmlFor="category"
+                  className="mb-2 block text-sm font-medium text-gray-700"
+                >
+                  Catégorie *
+                </label>
+                <select
+                  id="category"
+                  name="category"
+                  value={formData.category}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 transition-colors focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200"
+                >
+                  <option value="">Sélectionnez une catégorie</option>
+                  {categories.map((cat) => (
+                    <option key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Upload d'image */}
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Image de l'article (optionnel)
+                </label>
+
+                {!formData.imageUrl ? (
+                  <div className="rounded-lg border-2 border-dashed border-gray-300 p-6 text-center transition-colors hover:border-green-400">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      disabled={uploadingImage}
+                      className="hidden"
+                      id="image-upload"
+                    />
+                    <label
+                      htmlFor="image-upload"
+                      className={`flex cursor-pointer flex-col items-center ${
+                        uploadingImage ? "pointer-events-none" : ""
+                      }`}
+                    >
+                      {uploadingImage ? (
+                        <div className="flex items-center gap-2">
+                          <div className="size-6 animate-spin rounded-full border-b-2 border-green-600"></div>
+                          <span className="text-green-600">
+                            Upload en cours...
+                          </span>
+                        </div>
+                      ) : (
+                        <>
+                          <svg
+                            className="mb-4 size-12 text-gray-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                            />
+                          </svg>
+                          <span className="font-medium text-gray-600">
+                            Cliquez pour sélectionner une image
+                          </span>
+                          <span className="mt-1 text-sm text-gray-400">
+                            PNG, JPG, GIF jusqu'à 5MB
+                          </span>
+                        </>
+                      )}
+                    </label>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <div className="relative h-48 w-full overflow-hidden rounded-lg">
+                      <Image
+                        src={formData.imageUrl}
+                        alt="Aperçu de l'image"
+                        fill
+                        className="object-cover"
                       />
                     </div>
-                  )}
-                </div>
-
-                <div className="flex gap-4">
-                  <button
-                    type="button"
-                    disabled={loading}
-                    onClick={(e) => handleSubmit(e, true)}
-                    className="flex-1 rounded-lg bg-gray-600 py-3 text-white transition-colors hover:bg-gray-700 disabled:bg-gray-400"
-                  >
-                    {loading ? "Sauvegarde..." : "Sauvegarder en brouillon"}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={loading}
-                    onClick={(e) => handleSubmit(e, false)}
-                    className="flex-1 rounded-lg bg-green-600 py-3 text-white transition-colors hover:bg-green-700 disabled:bg-gray-400"
-                  >
-                    {loading ? "Publication..." : "Publier l'article"}
-                  </button>
-                </div>
-
-                {message && (
-                  <div
-                    className={`fixed right-4 top-4 z-50 max-w-sm rounded-lg p-4 shadow-lg ${
-                      message.type === "error"
-                        ? "border-l-4 border-red-700 bg-red-500 text-white"
-                        : "border-l-4 border-green-700 bg-green-500 text-white"
-                    }`}
-                  >
-                    <div className="flex items-center">
-                      <div className="flex-1">
-                        <p className="font-medium">{message.text}</p>
-                      </div>
-                      <button
-                        onClick={() => setMessage(null)}
-                        className="ml-2 text-white hover:text-gray-200"
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      className="absolute right-2 top-2 rounded-full bg-red-500 p-2 text-white shadow-lg transition-colors hover:bg-red-600"
+                    >
+                      <svg
+                        className="size-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
                       >
-                        ✕
-                      </button>
-                    </div>
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
                   </div>
                 )}
               </div>
-            </div>
+
+              {/* Extrait */}
+              <div>
+                <label
+                  htmlFor="excerpt"
+                  className="mb-2 block text-sm font-medium text-gray-700"
+                >
+                  Extrait (optionnel)
+                </label>
+                <textarea
+                  id="excerpt"
+                  name="excerpt"
+                  value={formData.excerpt}
+                  onChange={handleInputChange}
+                  rows={3}
+                  className="w-full resize-none rounded-lg border border-gray-300 px-4 py-3 transition-colors focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200"
+                  placeholder="Résumé court de l'article qui apparaîtra dans les aperçus..."
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  {formData.excerpt.length}/200 caractères
+                </p>
+              </div>
+
+              {/* Contenu */}
+              <div>
+                <label
+                  htmlFor="content"
+                  className="mb-2 block text-sm font-medium text-gray-700"
+                >
+                  Contenu de l'article *
+                </label>
+                <textarea
+                  id="content"
+                  name="content"
+                  value={formData.content}
+                  onChange={handleInputChange}
+                  required
+                  rows={12}
+                  className="w-full resize-none rounded-lg border border-gray-300 px-4 py-3 transition-colors focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200"
+                  placeholder="Rédigez votre article ici..."
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  {formData.content.length} caractères (minimum 50)
+                </p>
+              </div>
+
+              {/* Boutons */}
+              <div className="flex flex-col gap-4 pt-6 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={() => handleSubmit(false)}
+                  disabled={loading}
+                  className="flex-1 rounded-lg bg-gray-600 px-6 py-3 font-semibold text-white transition-all duration-200 hover:scale-105 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {loading ? (
+                    <div className="flex items-center justify-center">
+                      <div className="mr-2 size-5 animate-spin rounded-full border-b-2 border-white"></div>
+                      Enregistrement...
+                    </div>
+                  ) : (
+                    "💾 Enregistrer brouillon"
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleSubmit(true)}
+                  disabled={loading}
+                  className="flex-1 rounded-lg bg-green-600 px-6 py-3 font-semibold text-white transition-all duration-200 hover:scale-105 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {loading ? (
+                    <div className="flex items-center justify-center">
+                      <div className="mr-2 size-5 animate-spin rounded-full border-b-2 border-white"></div>
+                      Publication...
+                    </div>
+                  ) : (
+                    "📝 Publier l'article"
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  disabled={loading}
+                  className="rounded-lg border border-gray-300 px-6 py-3 font-semibold text-gray-700 transition-all duration-200 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50 sm:w-auto"
+                >
+                  🔄 Réinitialiser
+                </button>
+              </div>
+            </form>
           </div>
-        </section>
+        </div>
       </main>
+
       <Footer />
     </div>
   );

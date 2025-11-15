@@ -1,102 +1,31 @@
+import { getCurrentUser } from "@/app/api/utils/auth";
 import { prisma } from "@/app/db/prisma";
-import jwt from "jsonwebtoken";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-const JWT_SECRET = process.env.JWT_SECRET;
-
-if (!JWT_SECRET) {
-  throw new Error("JWT_SECRET n'est pas défini");
+interface RouteParams {
+  params: Promise<{
+    id: string;
+  }>;
 }
 
-export async function DELETE(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, context: RouteParams) {
   try {
-    const { id } = await params;
-    console.log("🗑️ API DELETE post appelée pour:", id);
+    const params = await context.params;
+    const { id } = params;
 
-    const authHeader = req.headers.get("authorization");
+    console.log("📖 Récupération post:", id);
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json(
-        { error: "Token d'authentification manquant" },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.substring(7);
-
-    let decoded;
-    try {
-      decoded = jwt.verify(token, JWT_SECRET) as {
-        userId: string;
-        email: string;
-        name: string;
-      };
-    } catch (jwtError) {
-      return NextResponse.json(
-        { error: "Token d'authentification invalide" },
-        { status: 401 }
-      );
-    }
-
-    // Vérifier que le post existe et appartient à l'utilisateur
     const post = await prisma.post.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        authorId: true,
-        title: true,
+      where: {
+        id: id,
+        published: true, // Seuls les posts publiés sont accessibles publiquement
       },
-    });
-
-    if (!post) {
-      return NextResponse.json(
-        { error: "Article non trouvé" },
-        { status: 404 }
-      );
-    }
-
-    if (post.authorId !== decoded.userId) {
-      return NextResponse.json(
-        { error: "Vous n'êtes pas autorisé à supprimer cet article" },
-        { status: 403 }
-      );
-    }
-
-    // Supprimer le post
-    await prisma.post.delete({
-      where: { id },
-    });
-
-    console.log("✅ Post supprimé:", post.title);
-
-    return NextResponse.json({
-      message: "Article supprimé avec succès",
-    });
-  } catch (error) {
-    console.error("❌ Erreur lors de la suppression du post:", error);
-    return NextResponse.json(
-      { error: "Erreur interne du serveur" },
-      { status: 500 }
-    );
-  }
-}
-
-export async function GET(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-
-    const post = await prisma.post.findUnique({
-      where: { id },
       include: {
         author: {
           select: {
+            id: true,
             name: true,
+            email: true,
           },
         },
       },
@@ -104,16 +33,194 @@ export async function GET(
 
     if (!post) {
       return NextResponse.json(
-        { error: "Article non trouvé" },
+        {
+          success: false,
+          message: "Article non trouvé",
+        },
         { status: 404 }
       );
     }
 
-    return NextResponse.json({ post });
-  } catch (error) {
-    console.error("Erreur lors de la récupération du post:", error);
+    // Incrémenter les vues
+    await prisma.post.update({
+      where: { id: id },
+      data: { views: { increment: 1 } },
+    });
+
+    return NextResponse.json({
+      success: true,
+      post: post,
+    });
+  } catch (error: any) {
+    console.error("❌ Erreur récupération post:", error);
+
     return NextResponse.json(
-      { error: "Erreur interne du serveur" },
+      {
+        success: false,
+        message: "Erreur lors de la récupération de l'article",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest, context: RouteParams) {
+  try {
+    const params = await context.params;
+    const { id } = params;
+
+    console.log("🗑️ Suppression post publié:", id);
+
+    if (!id) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "ID de l'article manquant",
+        },
+        { status: 400 }
+      );
+    }
+
+    const currentUser = await getCurrentUser(request);
+
+    if (!currentUser) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Authentification requise",
+        },
+        { status: 401 }
+      );
+    }
+
+    // Vérifier que le post existe et appartient à l'utilisateur
+    const post = await prisma.post.findFirst({
+      where: {
+        id: id,
+        authorId: currentUser.id,
+      },
+    });
+
+    if (!post) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Article non trouvé ou non autorisé",
+        },
+        { status: 404 }
+      );
+    }
+
+    // Supprimer le post
+    await prisma.post.delete({
+      where: { id: id },
+    });
+
+    console.log("✅ Post supprimé:", id);
+
+    return NextResponse.json({
+      success: true,
+      message: "Article supprimé avec succès",
+    });
+  } catch (error: any) {
+    console.error("❌ Erreur suppression post:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Erreur lors de la suppression de l'article",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(request: NextRequest, context: RouteParams) {
+  try {
+    const params = await context.params;
+    const { id } = params;
+    const body = await request.json();
+
+    console.log("✏️ Mise à jour post:", id);
+
+    if (!id) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "ID de l'article manquant",
+        },
+        { status: 400 }
+      );
+    }
+
+    const currentUser = await getCurrentUser(request);
+
+    if (!currentUser) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Authentification requise",
+        },
+        { status: 401 }
+      );
+    }
+
+    // Vérifier que le post appartient à l'utilisateur
+    const existingPost = await prisma.post.findFirst({
+      where: {
+        id: id,
+        authorId: currentUser.id,
+      },
+    });
+
+    if (!existingPost) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Article non trouvé ou non autorisé",
+        },
+        { status: 404 }
+      );
+    }
+
+    // Mettre à jour le post
+    const updatedPost = await prisma.post.update({
+      where: { id: id },
+      data: {
+        title: body.title?.trim(),
+        content: body.content?.trim(),
+        excerpt: body.excerpt?.trim() || null,
+        category: body.category,
+        imageUrl: body.imageUrl || null,
+        published: body.published ?? existingPost.published,
+        updatedAt: new Date(),
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    console.log("✅ Post mis à jour:", updatedPost.id);
+
+    return NextResponse.json({
+      success: true,
+      message: "Article mis à jour avec succès",
+      post: updatedPost,
+    });
+  } catch (error: any) {
+    console.error("❌ Erreur mise à jour post:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Erreur lors de la mise à jour",
+      },
       { status: 500 }
     );
   }

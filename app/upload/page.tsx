@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { useState } from "react";
 import { uploadAvatar } from "./uploadActions";
 
@@ -35,13 +34,13 @@ export default function AvatarUploadPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+    <div className="flex min-h-screen items-center justify-center bg-gray-100">
       <div
-        className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 m-4"
+        className="m-4 w-full max-w-md rounded-lg bg-white p-8 shadow-lg"
         role="main"
         aria-label="Formulaire de téléchargement d'avatar"
       >
-        <h1 className="text-3xl font-bold text-center text-gray-800 mb-8">
+        <h1 className="mb-8 text-center text-3xl font-bold text-gray-800">
           Téléchargez Votre Image
         </h1>
 
@@ -52,11 +51,11 @@ export default function AvatarUploadPage() {
         >
           <div className="flex flex-col items-center gap-4">
             {imageUrl && (
-              <div className="w-32 h-32 rounded-full overflow-hidden mb-4">
+              <div className="mb-4 size-32 overflow-hidden rounded-full">
                 <img
                   src={imageUrl}
                   alt="Avatar"
-                  className="w-full h-full object-cover"
+                  className="size-full object-cover"
                 />
               </div>
             )}
@@ -69,18 +68,18 @@ export default function AvatarUploadPage() {
               aria-label="Sélectionner une image pour l'avatar"
               disabled={isUploading}
               className="block w-full text-sm text-gray-500
-                file:mr-4 file:py-2 file:px-4
-                file:rounded-full file:border-0
-                file:text-sm file:font-semibold
-                file:bg-green-50 file:text-green-700
+                file:mr-4 file:rounded-full file:border-0
+                file:bg-green-50 file:px-4
+                file:py-2 file:text-sm
+                file:font-semibold file:text-green-700
                 hover:file:bg-green-100"
             />
             <button
               type="submit"
               disabled={isUploading}
               aria-busy={isUploading}
-              className="w-full bg-green-600 text-white py-2 px-4 rounded-lg
-                hover:bg-green-700 transition duration-200 font-semibold"
+              className="w-full rounded-lg bg-green-600 px-4 py-2 font-semibold
+                text-white transition duration-200 hover:bg-green-700"
             >
               {isUploading ? "Téléchargement..." : "Télécharger"}
             </button>
@@ -88,7 +87,7 @@ export default function AvatarUploadPage() {
         </form>
 
         {error && (
-          <div className="mt-4 p-4 bg-red-50 rounded-lg">
+          <div className="mt-4 rounded-lg bg-red-50 p-4">
             <p className="text-red-600">{error}</p>
           </div>
         )}

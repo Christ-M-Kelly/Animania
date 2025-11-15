@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { useAuth } from "@/src/hooks/useAuth";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 import C_Footer from "./C_Footer";
 
 export default function Connexion() {

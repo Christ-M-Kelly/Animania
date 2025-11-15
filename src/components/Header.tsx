@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import SearchBar from "./SearchBar";
 
 interface HeaderProps {
   className?: string;
@@ -29,6 +30,7 @@ export default function Header({ className }: HeaderProps) {
   const [isClient, setIsClient] = useState(false);
   const [activeSubMenu, setActiveSubMenu] = useState<string | null>(null);
   const [lastClickTime, setLastClickTime] = useState(0);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -184,7 +186,7 @@ export default function Header({ className }: HeaderProps) {
             />
           </Link>
           <nav aria-label="Navigation principale">
-            <ul className="ml-8 flex flex-row space-x-12">
+            <ul className="ml-8 hidden flex-row space-x-12 md:flex">
               {/* Ajout de ml-4 pour décaler le menu vers le centre */}
               {menu_navigation.map((link) => (
                 <li key={link.name} className="group relative">
@@ -378,32 +380,52 @@ export default function Header({ className }: HeaderProps) {
             </Link>
           )}
           {/* Recherche */}
-          <div className="relative">
-            <span className="absolute inset-y-0 left-3 flex items-center">
-              <svg
-                className="size-5 text-gray-400"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M10 4a6 6 0 100 12 6 6 0 000-12zM21 21l-4.35-4.35"
-                />
-              </svg>
-            </span>
-            <input
-              type="text"
-              placeholder="Rechercher..."
-              className="rounded-lg border border-gray-300 px-4 py-2 pl-10 transition duration-300 hover:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500"
-              aria-label="Barre de recherche"
-            />
+          <div className="hidden md:block">
+            <SearchBar />
           </div>
         </div>
       </div>
+
+      {/* Menu mobile */}
+      {isMobileMenuOpen && (
+        <div className="border-t border-gray-200 pb-4 md:hidden">
+          {/* Barre de recherche mobile */}
+          <div className="py-4">
+            <SearchBar />
+          </div>
+
+          <nav className="space-y-2">
+            <Link
+              href="/"
+              className="block py-2 text-gray-700 hover:text-green-600"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Accueil
+            </Link>
+            <Link
+              href="/articles"
+              className="block py-2 text-gray-700 hover:text-green-600"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Articles
+            </Link>
+            <Link
+              href="/a-propos"
+              className="block py-2 text-gray-700 hover:text-green-600"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              À propos
+            </Link>
+            <Link
+              href="/profil"
+              className="block py-2 font-medium text-green-600"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Profil
+            </Link>
+          </nav>
+        </div>
+      )}
     </header>
   );
 }

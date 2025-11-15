@@ -1,134 +1,104 @@
+import { getCurrentUser } from "@/app/api/utils/auth";
 import { prisma } from "@/app/db/prisma";
-import jwt from "jsonwebtoken";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-const JWT_SECRET = process.env.JWT_SECRET;
-
-if (!JWT_SECRET) {
-  throw new Error("JWT_SECRET n'est pas défini");
+interface RouteParams {
+  params: Promise<{
+    id: string;
+  }>;
 }
 
-export async function POST(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, context: RouteParams) {
   try {
-    const { id } = await params;
-    console.log("📢 Publication du brouillon:", id);
+    // Attendre les paramètres asynchrones (Next.js 14+)
+    const params = await context.params;
+    const { id } = params;
 
-    const authHeader = req.headers.get("authorization");
+    console.log("📢 Publication brouillon - ID reçu:", id);
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (!id) {
+      console.error("❌ ID manquant dans les paramètres");
       return NextResponse.json(
-        { error: "Token d'authentification manquant" },
+        {
+          success: false,
+          message: "ID du brouillon manquant",
+        },
+        { status: 400 }
+      );
+    }
+
+    const currentUser = await getCurrentUser(request);
+
+    if (!currentUser) {
+      console.log("❌ Utilisateur non authentifié");
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Authentification requise",
+        },
         { status: 401 }
       );
     }
 
-    const token = authHeader.substring(7);
+    console.log("🔍 Recherche du brouillon:", { id, userId: currentUser.id });
 
-    let decoded;
-    try {
-      decoded = jwt.verify(token, JWT_SECRET) as {
-        userId: string;
-        email: string;
-        name: string;
-      };
-    } catch (jwtError) {
+    // Vérifier que le brouillon existe et appartient à l'utilisateur
+    const draft = await prisma.post.findFirst({
+      where: {
+        id: id,
+        authorId: currentUser.id,
+        published: false,
+      },
+    });
+
+    if (!draft) {
+      console.log("❌ Brouillon non trouvé:", { id, userId: currentUser.id });
       return NextResponse.json(
-        { error: "Token d'authentification invalide" },
-        { status: 401 }
+        {
+          success: false,
+          message: "Brouillon non trouvé ou déjà publié",
+        },
+        { status: 404 }
       );
     }
 
-    // Récupérer le brouillon
-    const draft = await prisma.draft.findUnique({
-      where: { id },
+    console.log("✅ Brouillon trouvé, publication en cours...");
+
+    // Publier le brouillon
+    const publishedPost = await prisma.post.update({
+      where: { id: id },
+      data: {
+        published: true,
+        updatedAt: new Date(),
+      },
       include: {
         author: {
           select: {
             id: true,
             name: true,
+            email: true,
           },
         },
       },
     });
 
-    if (!draft) {
-      return NextResponse.json(
-        { error: "Brouillon non trouvé" },
-        { status: 404 }
-      );
-    }
-
-    if (draft.authorId !== decoded.userId) {
-      return NextResponse.json(
-        { error: "Vous n'êtes pas autorisé à publier ce brouillon" },
-        { status: 403 }
-      );
-    }
-
-    console.log("✅ Brouillon trouvé:", draft.title);
-
-    // Générer le slug pour la publication
-    const generateSlug = (title: string) => {
-      return (
-        title
-          .toLowerCase()
-          .replace(/[^a-z0-9\s-]/g, "")
-          .replace(/\s+/g, "-")
-          .replace(/-+/g, "-")
-          .replace(/^-|-$/g, "") +
-        "-" +
-        Date.now()
-      );
-    };
-
-    const slug = generateSlug(draft.title);
-
-    // Créer le post à partir du brouillon
-    const post = await prisma.post.create({
-      data: {
-        title: draft.title,
-        content: draft.content,
-        excerpt: draft.excerpt,
-        category: draft.category,
-        slug: slug,
-        imageUrl: draft.imageUrl,
-        published: true,
-        featured: false,
-        tags: draft.tags,
-        authorId: draft.authorId,
-      },
-      include: {
-        author: {
-          select: {
-            name: true,
-          },
-        },
-      },
-    });
-
-    // Supprimer le brouillon après publication
-    await prisma.draft.delete({
-      where: { id },
-    });
-
-    console.log("✅ Brouillon publié et transféré:", {
-      draftId: id,
-      postId: post.id,
-      title: post.title,
-      slug: post.slug,
-    });
+    console.log("✅ Brouillon publié avec succès:", publishedPost.id);
 
     return NextResponse.json({
-      message: "Brouillon publié avec succès",
-      post: post,
+      success: true,
+      message: "Article publié avec succès",
+      post: publishedPost,
     });
-  } catch (error) {
-    console.error("❌ Erreur lors de la publication du brouillon:", error);
+  } catch (error: any) {
+    console.error("❌ Erreur publication brouillon:", error);
+
     return NextResponse.json(
-      { error: "Erreur interne du serveur" },
+      {
+        success: false,
+        message: "Erreur lors de la publication",
+        error:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
+      },
       { status: 500 }
     );
   }

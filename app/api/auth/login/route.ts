@@ -1,60 +1,65 @@
-import { NextResponse } from "next/server";
+import { generateToken } from "@/app/api/utils/auth";
 import { prisma } from "@/app/db/prisma";
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
+import { NextRequest, NextResponse } from "next/server";
 
-const JWT_SECRET = process.env.JWT_SECRET;
-
-if (!JWT_SECRET) {
-  throw new Error("JWT_SECRET n'est pas défini dans les variables d'environnement");
-}
-
-export async function POST(req: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await req.json();
+    const { email, password, rememberMe } = await request.json();
 
-    // Validation des données
+    console.log("🔐 Tentative de connexion:", { email, rememberMe });
+
     if (!email || !password) {
       return NextResponse.json(
-        { error: "Email et mot de passe requis" },
+        {
+          success: false,
+          message: "Email et mot de passe requis",
+        },
         { status: 400 }
       );
     }
 
     // Rechercher l'utilisateur
     const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
+      where: { email: email.toLowerCase().trim() },
     });
 
     if (!user) {
+      console.log("❌ Utilisateur non trouvé:", email);
       return NextResponse.json(
-        { error: "Email ou mot de passe incorrect" },
+        {
+          success: false,
+          message: "Email ou mot de passe incorrect",
+        },
         { status: 401 }
       );
     }
 
     // Vérifier le mot de passe
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isValidPassword = await bcrypt.compare(password, user.password);
 
-    if (!isPasswordValid) {
+    if (!isValidPassword) {
+      console.log("❌ Mot de passe incorrect pour:", email);
       return NextResponse.json(
-        { error: "Email ou mot de passe incorrect" },
+        {
+          success: false,
+          message: "Email ou mot de passe incorrect",
+        },
         { status: 401 }
       );
     }
 
-    // Créer le token JWT
-    const token = jwt.sign(
-      {
-        userId: user.id,
-        email: user.email,
-        name: user.name,
-      },
-      JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+    // Générer le token
+    const token = generateToken({
+      userId: user.id,
+      email: user.email,
+    });
 
-    return NextResponse.json({
+    console.log("✅ Connexion réussie:", user.email);
+
+    // Créer la réponse avec le token
+    const response = NextResponse.json({
+      success: true,
       message: "Connexion réussie",
       token,
       user: {
@@ -64,10 +69,24 @@ export async function POST(req: Request) {
         role: user.role,
       },
     });
-  } catch (error) {
-    console.error("Erreur lors de la connexion:", error);
+
+    // Définir le cookie (optionnel, pour compatibilité)
+    response.cookies.set("auth-token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: rememberMe ? 7 * 24 * 60 * 60 : 24 * 60 * 60, // 7 jours ou 1 jour
+    });
+
+    return response;
+  } catch (error: any) {
+    console.error("❌ Erreur login:", error);
+
     return NextResponse.json(
-      { error: "Erreur interne du serveur" },
+      {
+        success: false,
+        message: "Erreur serveur lors de la connexion",
+      },
       { status: 500 }
     );
   }

@@ -1,12 +1,16 @@
 import { prisma } from "@/app/db/prisma";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(
-  req: Request,
-  { params }: { params: Promise<{ category: string }> }
-) {
+interface RouteParams {
+  params: Promise<{
+    category: string;
+  }>;
+}
+
+export async function GET(request: NextRequest, context: RouteParams) {
   try {
-    const { category } = await params;
+    const params = await context.params;
+    const { category } = params;
 
     console.log("📂 Récupération des posts pour la catégorie:", category);
 
