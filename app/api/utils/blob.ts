@@ -25,7 +25,8 @@ export async function uploadBuffer(
   buffer: ArrayBuffer | Uint8Array,
   fileName: string
 ): Promise<string> {
-  const { url } = await put(fileName, buffer, {
+  const blob = new Blob([buffer]);
+  const { url } = await put(fileName, blob, {
     access: "public",
     token: process.env.BLOB_READ_WRITE_TOKEN!,
   });
@@ -52,10 +53,9 @@ export async function uploadFromBuffer(
   fileName: string
 ): Promise<string> {
   // Convertir le Buffer Node.js en ArrayBuffer
-  const arrayBuffer = buffer.buffer.slice(
-    buffer.byteOffset,
-    buffer.byteOffset + buffer.byteLength
-  );
+  const arrayBuffer = new ArrayBuffer(buffer.length);
+  const view = new Uint8Array(arrayBuffer);
+  view.set(buffer);
 
   const { url } = await put(fileName, arrayBuffer, {
     access: "public",
