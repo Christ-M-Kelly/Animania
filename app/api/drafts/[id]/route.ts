@@ -5,7 +5,7 @@ import { prisma } from "@/app/db/prisma";
 import jwt from "jsonwebtoken";
 import { NextRequest, NextResponse } from "next/server";
 
-const JWT_SECRET = process.env.JWT_SECRET; // Assurez-vous que JWT_SECRET est disponible
+const JWT_SECRET = process.env.JWT_SECRET as string; // Assurez-vous que JWT_SECRET est disponible
 
 if (!JWT_SECRET) {
   throw new Error("JWT_SECRET n'est pas défini");

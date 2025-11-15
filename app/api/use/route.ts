@@ -6,7 +6,7 @@ interface DecodedToken {
   id: string;
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || "votre_clé_secrète";
+const JWT_SECRET = process.env.JWT_SECRET as string;
 
 export async function GET(req: Request) {
   try {
