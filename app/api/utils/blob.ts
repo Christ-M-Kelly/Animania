@@ -22,7 +22,7 @@ export async function uploadImageWithCustomName(
 }
 
 export async function uploadBuffer(
-  buffer: Buffer,
+  buffer: ArrayBuffer | Uint8Array,
   fileName: string
 ): Promise<string> {
   const { url } = await put(fileName, buffer, {
@@ -39,6 +39,25 @@ export async function uploadBlob(
   fileName: string
 ): Promise<string> {
   const { url } = await put(fileName, blob, {
+    access: "public",
+    token: process.env.BLOB_READ_WRITE_TOKEN!,
+  });
+
+  return url;
+}
+
+// Fonction pour uploader depuis un Buffer Node.js
+export async function uploadFromBuffer(
+  buffer: Buffer,
+  fileName: string
+): Promise<string> {
+  // Convertir le Buffer Node.js en ArrayBuffer
+  const arrayBuffer = buffer.buffer.slice(
+    buffer.byteOffset,
+    buffer.byteOffset + buffer.byteLength
+  );
+
+  const { url } = await put(fileName, arrayBuffer, {
     access: "public",
     token: process.env.BLOB_READ_WRITE_TOKEN!,
   });
