@@ -1,4 +1,5 @@
 import { prisma } from "@/app/db/prisma";
+import { AnimalCategory } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
 interface RouteParams {
@@ -7,25 +8,30 @@ interface RouteParams {
   }>;
 }
 
-export async function GET(request: NextRequest, context: RouteParams) {
+export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const params = await context.params;
-    const { category } = params;
+    const { category } = await params;
 
-    console.log("📂 Récupération des posts pour la catégorie:", category);
+    console.log("🔍 Récupération des posts pour la catégorie:", category);
 
-    const validCategories = ["TERRESTRES", "MARINS", "AERIENS", "EAU_DOUCE"];
+    // Validation de la catégorie
+    const validCategories = Object.values(AnimalCategory);
+    const categoryUpperCase = category.toUpperCase() as AnimalCategory;
 
-    if (!validCategories.includes(category.toUpperCase())) {
+    if (!validCategories.includes(categoryUpperCase)) {
       return NextResponse.json(
-        { error: "Catégorie invalide" },
+        {
+          success: false,
+          message: "Catégorie invalide",
+          validCategories,
+        },
         { status: 400 }
       );
     }
 
     const posts = await prisma.post.findMany({
       where: {
-        category: category.toUpperCase(),
+        category: categoryUpperCase, // Maintenant typé correctement
         published: true,
       },
       orderBy: {
@@ -34,25 +40,30 @@ export async function GET(request: NextRequest, context: RouteParams) {
       include: {
         author: {
           select: {
+            id: true,
             name: true,
+            email: true,
           },
         },
       },
     });
 
-    console.log(
-      `📊 ${posts.length} posts trouvés pour la catégorie ${category}`
-    );
+    console.log(`✅ ${posts.length} posts trouvés pour ${category}`);
 
     return NextResponse.json({
-      category: category,
-      posts: posts,
+      success: true,
+      posts,
+      category: categoryUpperCase,
       count: posts.length,
     });
   } catch (error) {
     console.error("❌ Erreur récupération posts par catégorie:", error);
     return NextResponse.json(
-      { error: "Erreur interne du serveur" },
+      {
+        success: false,
+        message: "Erreur lors de la récupération des posts",
+        error: error instanceof Error ? error.message : "Erreur inconnue",
+      },
       { status: 500 }
     );
   }
