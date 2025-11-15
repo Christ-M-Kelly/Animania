@@ -1,16 +1,15 @@
 "use client";
-import "@fortawesome/fontawesome-free/css/all.min.css";
-import React, { useState } from "react";
+
+import { useState } from "react";
 import { useAuth } from "@/src/hooks/useAuth";
 import { useRouter, useSearchParams } from "next/navigation";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import C_Footer from "./C_Footer";
 
 export default function Connexion() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -49,7 +48,7 @@ export default function Connexion() {
         };
 
         login(userData, data.token);
-        toast.success(`Bonjour, ${userData.name} !`);
+        setSuccess(`Bonjour, ${userData.name} !`);
         router.push(decodeURIComponent(returnUrl));
       }
     } catch (error) {
@@ -60,29 +59,35 @@ export default function Connexion() {
 
   return (
     <div>
-      <ToastContainer />
-      <main className="relative min-h-screen flex flex-col items-center justify-center py-12">
+      <main className="relative flex min-h-screen flex-col items-center justify-center py-12">
         <video
           src="/videos/2_chiots.mp4"
           autoPlay
           muted
           loop
-          className="fixed top-0 left-0 w-full h-full object-cover z-[-1]"
+          className="fixed left-0 top-0 z-[-1] size-full object-cover"
         />
-        <div className="fixed top-0 left-0 w-full h-full bg-gradient-to-b from-black/80 via-black/60 to-green-900/40 z-[-1]" />
+        <div className="fixed left-0 top-0 z-[-1] size-full bg-gradient-to-b from-black/80 via-black/60 to-green-900/40" />
 
-        <div className="relative bg-white/10 p-6 md:p-10 rounded-3xl shadow-2xl w-[90%] max-w-md backdrop-blur-md border border-green-200/20 z-10">
-          <h2 className="text-2xl md:text-3xl font-bold text-center mb-6 md:mb-8 text-green-100">
+        <div className="relative z-10 w-[90%] max-w-md rounded-3xl border border-green-200/20 bg-white/10 p-6 shadow-2xl backdrop-blur-md md:p-10">
+          <h2 className="mb-6 text-center text-2xl font-bold text-green-100 md:mb-8 md:text-3xl">
             Connexion
           </h2>
           {error && (
-            <div className="text-red-600 text-sm text-center mb-4">{error}</div>
+            <div className="mb-4 rounded-xl border border-red-400/50 bg-red-500/20 p-3 text-red-200 backdrop-blur-sm">
+              {error}
+            </div>
+          )}
+          {success && (
+            <div className="mb-4 rounded-xl border border-green-400/50 bg-green-500/20 p-3 text-green-200 backdrop-blur-sm">
+              {success}
+            </div>
           )}
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-green-200 mb-1.5"
+                className="mb-1.5 block text-sm font-medium text-green-200"
               >
                 Email
               </label>
@@ -93,13 +98,13 @@ export default function Connexion() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="votre@email.com"
                 required
-                className="mt-1 block w-full px-3 py-2.5 rounded-xl bg-white/10 border border-green-200/20 focus:border-green-400 focus:ring-2 focus:ring-green-300/40 transition-all duration-200 text-green-100 placeholder-green-300/50 text-sm"
+                className="mt-1 block w-full rounded-xl border border-green-200/20 bg-white/10 px-3 py-2.5 text-sm text-green-100 transition-all duration-200 placeholder:text-green-300/50 focus:border-green-400 focus:ring-2 focus:ring-green-300/40"
               />
             </div>
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-green-200 mb-1.5"
+                className="mb-1.5 block text-sm font-medium text-green-200"
               >
                 Mot de passe
               </label>
@@ -111,12 +116,12 @@ export default function Connexion() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  className="mt-1 block w-full px-3 py-2.5 rounded-xl bg-white/10 border border-green-200/20 focus:border-green-400 focus:ring-2 focus:ring-green-300/40 transition-all duration-200 text-green-100 placeholder-green-300/50 text-sm"
+                  className="mt-1 block w-full rounded-xl border border-green-200/20 bg-white/10 px-3 py-2.5 text-sm text-green-100 transition-all duration-200 placeholder:text-green-300/50 focus:border-green-400 focus:ring-2 focus:ring-green-300/40"
                 />
                 <button
                   type="button"
                   onClick={togglePasswordVisibility}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-green-100 hover:text-green-400 transition-colors duration-200"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-green-100 transition-colors duration-200 hover:text-green-400"
                 >
                   <i
                     className={`fas ${
@@ -128,22 +133,22 @@ export default function Connexion() {
             </div>
             <button
               type="submit"
-              className="w-full bg-gradient-to-r from-green-500 to-green-700 text-white py-2.5 rounded-xl hover:from-green-600 hover:to-green-800 transform hover:scale-[1.02] transition-all duration-200 font-medium text-sm mt-6"
+              className="mt-6 w-full rounded-xl bg-gradient-to-r from-green-500 to-green-700 py-2.5 text-sm font-medium text-white transition-all duration-200 hover:scale-[1.02] hover:from-green-600 hover:to-green-800"
             >
               Se connecter
             </button>
-            <div className="text-center text-green-200 mt-20">
-              <div className="flex items-center mb-6">
-                <div className="flex-grow border-t border-green-200/30" />
+            <div className="mt-20 text-center text-green-200">
+              <div className="mb-6 flex items-center">
+                <div className="grow border-t border-green-200/30" />
                 <span className="mx-4 text-sm">Pas encore de compte ?</span>
-                <div className="flex-grow border-t border-green-200/30" />
+                <div className="grow border-t border-green-200/30" />
               </div>
               <button
                 onClick={(event) => {
                   event.preventDefault();
                   router.push("/formulaire_inscription");
                 }}
-                className="w-full border-2 border-green-200/20 text-white py-2.5 rounded-xl hover:bg-green-200/20 transition-all duration-200 font-medium text-sm"
+                className="w-full rounded-xl border-2 border-green-200/20 py-2.5 text-sm font-medium text-white transition-all duration-200 hover:bg-green-200/20"
               >
                 S'inscrire
               </button>

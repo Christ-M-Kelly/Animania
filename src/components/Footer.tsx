@@ -40,38 +40,38 @@ export default function Footer({ className }: FooterProps) {
 
   return (
     <footer
-      className={`bg-gradient-to-b from-green-700 to-green-900 py-6 relative ${
+      className={`relative bg-gradient-to-b from-green-700 to-green-900 py-6 ${
         className || ""
       }`}
       role="contentinfo"
     >
-      <div className="container mx-auto px-4 max-w-7xl">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="container mx-auto max-w-7xl px-4">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           {/* Logo et description */}
-          <div className="flex flex-col space-y-3 items-center md:items-start">
+          <div className="flex flex-col items-center space-y-3 md:items-start">
             <Link
               href="/"
-              className="flex items-center justify-center space-x-3 hover:opacity-90 transition-opacity"
+              className="flex items-center justify-center space-x-3 transition-opacity hover:opacity-90"
             >
               <Image
                 src="/images/logo_rbg.png"
                 alt="Logo Animania - Votre portail sur le monde animal"
                 width={70} // Diminution de la taille du logo
                 height={70}
-                className="rounded-full border-2 border-green-700 shadow-lg hover:scale-105 transition-transform duration-300 bg-white"
+                className="rounded-full border-2 border-green-700 bg-white shadow-lg transition-transform duration-300 hover:scale-105"
               />
-              <h3 className="text-xl font-bold text-white font-serif">
+              <h3 className="font-serif text-xl font-bold text-white">
                 Animania
               </h3>
             </Link>
-            <p className="text-gray-300 text-center md:text-left text-sm">
+            <p className="text-center text-sm text-gray-300 md:text-left">
               Où chaque créature a une histoire à raconter !
             </p>
           </div>
 
           {/* Navigation */}
           <div className="flex flex-col items-center md:items-start">
-            <h4 className="text-white font-semibold text-lg mb-3">
+            <h4 className="mb-3 text-lg font-semibold text-white">
               Navigation
             </h4>
             <nav>
@@ -80,7 +80,7 @@ export default function Footer({ className }: FooterProps) {
                   <li key={link.name}>
                     <Link
                       href={link.href}
-                      className="text-gray-300 hover:text-green-300 hover:underline transition-colors duration-200 text-sm"
+                      className="text-sm text-gray-300 transition-colors duration-200 hover:text-green-300 hover:underline"
                     >
                       {link.name}
                     </Link>
@@ -92,7 +92,7 @@ export default function Footer({ className }: FooterProps) {
 
           {/* Réseaux sociaux */}
           <div className="flex flex-col items-center md:items-start">
-            <h4 className="text-white font-semibold text-lg mb-3">
+            <h4 className="mb-3 text-lg font-semibold text-white">
               Suivez-nous
             </h4>
             <div className="flex space-x-4">
@@ -100,13 +100,13 @@ export default function Footer({ className }: FooterProps) {
                 <div key={social.name} className="group relative">
                   <a
                     href={social.url}
-                    className="text-gray-300 hover:text-white transform hover:scale-110 transition-all duration-200"
+                    className="text-gray-300 transition-all duration-200 hover:scale-110 hover:text-white"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
                     <span className="sr-only">{social.name}</span>
                     <svg
-                      className="w-5 h-5" // Réduction de la taille des icônes sociales
+                      className="size-5" // Réduction de la taille des icônes sociales
                       fill="currentColor"
                       viewBox="0 0 24 24"
                       aria-label={`Icône ${social.name}`}
@@ -114,7 +114,7 @@ export default function Footer({ className }: FooterProps) {
                       {social.icon}
                     </svg>
                   </a>
-                  <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-white text-black px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+                  <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-white px-2 py-1 text-xs text-black opacity-0 transition-opacity duration-200 group-hover:opacity-100">
                     {social.name}
                   </div>
                 </div>
@@ -124,11 +124,11 @@ export default function Footer({ className }: FooterProps) {
         </div>
 
         {/* Séparateur */}
-        <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-400 to-transparent my-6"></div>
+        <div className="my-6 h-px w-full bg-gradient-to-r from-transparent via-gray-400 to-transparent"></div>
 
         {/* Copyright */}
         <div className="text-center">
-          <p className="text-gray-300 text-xs">
+          <p className="text-xs text-gray-300">
             &copy; {currentYear} Animania - Tous droits réservés
           </p>
         </div>

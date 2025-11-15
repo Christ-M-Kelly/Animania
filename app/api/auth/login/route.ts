@@ -1,21 +1,34 @@
+import { NextResponse } from "next/server";
 import { prisma } from "@/app/db/prisma";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { NextResponse } from "next/server";
+
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET n'est pas défini dans les variables d'environnement");
+}
 
 export async function POST(req: Request) {
   try {
     const { email, password } = await req.json();
 
-    // Vérifier si l'utilisateur existe
+    // Validation des données
+    if (!email || !password) {
+      return NextResponse.json(
+        { error: "Email et mot de passe requis" },
+        { status: 400 }
+      );
+    }
+
+    // Rechercher l'utilisateur
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { email: email.toLowerCase() },
     });
 
     if (!user) {
-      console.error(`Utilisateur avec l'email ${email} non trouvé`); // Log utile pour déboguer
-      return new Response(
-        JSON.stringify({ success: false, message: "Utilisateur non trouvé." }),
+      return NextResponse.json(
+        { error: "Email ou mot de passe incorrect" },
         { status: 401 }
       );
     }
@@ -24,33 +37,37 @@ export async function POST(req: Request) {
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
-      console.error(`Mot de passe incorrect pour l'utilisateur ${email}`);
-      return new Response(
-        JSON.stringify({ success: false, message: "Mot de passe incorrect." }),
+      return NextResponse.json(
+        { error: "Email ou mot de passe incorrect" },
         { status: 401 }
       );
     }
 
-    // Générer un token JWT
+    // Créer le token JWT
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET as string,
-      { expiresIn: "1h" }
+      {
+        userId: user.id,
+        email: user.email,
+        name: user.name,
+      },
+      JWT_SECRET,
+      { expiresIn: "7d" }
     );
 
-    // Inclure les informations de l'utilisateur dans la réponse
     return NextResponse.json({
-      success: true,
+      message: "Connexion réussie",
+      token,
       user: {
+        id: user.id,
         name: user.name,
-        email: user.email
+        email: user.email,
+        role: user.role,
       },
-      token: token
     });
   } catch (error) {
-    console.error("Erreur interne:", error); // Ajout du log pour les erreurs serveur
-    return new Response(
-      JSON.stringify({ success: false, message: "Erreur interne." }),
+    console.error("Erreur lors de la connexion:", error);
+    return NextResponse.json(
+      { error: "Erreur interne du serveur" },
       { status: 500 }
     );
   }

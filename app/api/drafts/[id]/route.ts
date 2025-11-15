@@ -14,7 +14,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    console.log("🗑️ API DELETE post appelée pour:", id);
+    console.log("🗑️ API DELETE draft appelée pour:", id);
 
     const authHeader = req.headers.get("authorization");
 
@@ -41,8 +41,8 @@ export async function DELETE(
       );
     }
 
-    // Vérifier que le post existe et appartient à l'utilisateur
-    const post = await prisma.post.findUnique({
+    // Vérifier que le brouillon existe et appartient à l'utilisateur
+    const draft = await prisma.draft.findUnique({
       where: { id },
       select: {
         id: true,
@@ -51,32 +51,32 @@ export async function DELETE(
       },
     });
 
-    if (!post) {
+    if (!draft) {
       return NextResponse.json(
-        { error: "Article non trouvé" },
+        { error: "Brouillon non trouvé" },
         { status: 404 }
       );
     }
 
-    if (post.authorId !== decoded.userId) {
+    if (draft.authorId !== decoded.userId) {
       return NextResponse.json(
-        { error: "Vous n'êtes pas autorisé à supprimer cet article" },
+        { error: "Vous n'êtes pas autorisé à supprimer ce brouillon" },
         { status: 403 }
       );
     }
 
-    // Supprimer le post
-    await prisma.post.delete({
+    // Supprimer le brouillon
+    await prisma.draft.delete({
       where: { id },
     });
 
-    console.log("✅ Post supprimé:", post.title);
+    console.log("✅ Brouillon supprimé:", draft.title);
 
     return NextResponse.json({
-      message: "Article supprimé avec succès",
+      message: "Brouillon supprimé avec succès",
     });
   } catch (error) {
-    console.error("❌ Erreur lors de la suppression du post:", error);
+    console.error("❌ Erreur lors de la suppression du brouillon:", error);
     return NextResponse.json(
       { error: "Erreur interne du serveur" },
       { status: 500 }
@@ -91,7 +91,32 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const post = await prisma.post.findUnique({
+    const authHeader = req.headers.get("authorization");
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return NextResponse.json(
+        { error: "Token d'authentification manquant" },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.substring(7);
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as {
+        userId: string;
+        email: string;
+        name: string;
+      };
+    } catch (jwtError) {
+      return NextResponse.json(
+        { error: "Token d'authentification invalide" },
+        { status: 401 }
+      );
+    }
+
+    const draft = await prisma.draft.findUnique({
       where: { id },
       include: {
         author: {
@@ -102,16 +127,23 @@ export async function GET(
       },
     });
 
-    if (!post) {
+    if (!draft) {
       return NextResponse.json(
-        { error: "Article non trouvé" },
+        { error: "Brouillon non trouvé" },
         { status: 404 }
       );
     }
 
-    return NextResponse.json({ post });
+    if (draft.authorId !== decoded.userId) {
+      return NextResponse.json(
+        { error: "Vous n'êtes pas autorisé à voir ce brouillon" },
+        { status: 403 }
+      );
+    }
+
+    return NextResponse.json({ draft });
   } catch (error) {
-    console.error("Erreur lors de la récupération du post:", error);
+    console.error("Erreur lors de la récupération du brouillon:", error);
     return NextResponse.json(
       { error: "Erreur interne du serveur" },
       { status: 500 }

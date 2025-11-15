@@ -1,21 +1,23 @@
-/* eslint-disable no-var */
 import { PrismaClient } from "@prisma/client";
 
 declare global {
-  var prisma: PrismaClient | undefined;
+  var __prisma: PrismaClient | undefined;
 }
 
-// Initialisation unique de Prisma Client
-export const prisma =
-  global.prisma ||
+// Configuration pour MongoDB avec logs détaillés
+const prisma =
+  globalThis.__prisma ??
   new PrismaClient({
-    log:
-      process.env.NODE_ENV === "development"
-        ? ["query", "info", "warn", "error"] // Log supplémentaire pour le développement
-        : ["error"], // Moins de logs en production
+    log: ["query", "info", "warn", "error"],
+    datasources: {
+      db: {
+        url: process.env.DATABASE_URL,
+      },
+    },
   });
 
-// Assurez-vous que Prisma n'est pas réinitialisé à chaque rechargement en développement
 if (process.env.NODE_ENV !== "production") {
-  global.prisma = prisma;
+  globalThis.__prisma = prisma;
 }
+
+export { prisma };

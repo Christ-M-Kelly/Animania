@@ -8,13 +8,13 @@ if (!JWT_SECRET) {
   throw new Error("JWT_SECRET n'est pas défini");
 }
 
-export async function DELETE(
+export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-    console.log("🗑️ API DELETE post appelée pour:", id);
+    console.log("📢 Publication du brouillon:", id);
 
     const authHeader = req.headers.get("authorization");
 
@@ -48,6 +48,7 @@ export async function DELETE(
         id: true,
         authorId: true,
         title: true,
+        published: true,
       },
     });
 
@@ -60,39 +61,22 @@ export async function DELETE(
 
     if (post.authorId !== decoded.userId) {
       return NextResponse.json(
-        { error: "Vous n'êtes pas autorisé à supprimer cet article" },
+        { error: "Vous n'êtes pas autorisé à publier cet article" },
         { status: 403 }
       );
     }
 
-    // Supprimer le post
-    await prisma.post.delete({
+    if (post.published) {
+      return NextResponse.json(
+        { error: "Cet article est déjà publié" },
+        { status: 400 }
+      );
+    }
+
+    // Publier le brouillon
+    const updatedPost = await prisma.post.update({
       where: { id },
-    });
-
-    console.log("✅ Post supprimé:", post.title);
-
-    return NextResponse.json({
-      message: "Article supprimé avec succès",
-    });
-  } catch (error) {
-    console.error("❌ Erreur lors de la suppression du post:", error);
-    return NextResponse.json(
-      { error: "Erreur interne du serveur" },
-      { status: 500 }
-    );
-  }
-}
-
-export async function GET(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-
-    const post = await prisma.post.findUnique({
-      where: { id },
+      data: { published: true },
       include: {
         author: {
           select: {
@@ -102,16 +86,14 @@ export async function GET(
       },
     });
 
-    if (!post) {
-      return NextResponse.json(
-        { error: "Article non trouvé" },
-        { status: 404 }
-      );
-    }
+    console.log("✅ Brouillon publié:", updatedPost.title);
 
-    return NextResponse.json({ post });
+    return NextResponse.json({
+      message: "Brouillon publié avec succès",
+      post: updatedPost,
+    });
   } catch (error) {
-    console.error("Erreur lors de la récupération du post:", error);
+    console.error("❌ Erreur lors de la publication du brouillon:", error);
     return NextResponse.json(
       { error: "Erreur interne du serveur" },
       { status: 500 }

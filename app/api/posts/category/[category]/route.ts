@@ -1,0 +1,55 @@
+import { prisma } from "@/app/db/prisma";
+import { NextResponse } from "next/server";
+
+export async function GET(
+  req: Request,
+  { params }: { params: Promise<{ category: string }> }
+) {
+  try {
+    const { category } = await params;
+
+    console.log("📂 Récupération des posts pour la catégorie:", category);
+
+    const validCategories = ["TERRESTRES", "MARINS", "AERIENS", "EAU_DOUCE"];
+
+    if (!validCategories.includes(category.toUpperCase())) {
+      return NextResponse.json(
+        { error: "Catégorie invalide" },
+        { status: 400 }
+      );
+    }
+
+    const posts = await prisma.post.findMany({
+      where: {
+        category: category.toUpperCase(),
+        published: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      include: {
+        author: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+
+    console.log(
+      `📊 ${posts.length} posts trouvés pour la catégorie ${category}`
+    );
+
+    return NextResponse.json({
+      category: category,
+      posts: posts,
+      count: posts.length,
+    });
+  } catch (error) {
+    console.error("❌ Erreur récupération posts par catégorie:", error);
+    return NextResponse.json(
+      { error: "Erreur interne du serveur" },
+      { status: 500 }
+    );
+  }
+}

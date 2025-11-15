@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
-import Image from "next/image";
 import { jwtDecode } from "jwt-decode";
-import { useState, useEffect } from "react";
+import Image from "next/image";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 interface HeaderProps {
   className?: string;
@@ -169,7 +169,7 @@ export default function Header({ className }: HeaderProps) {
 
   return (
     <header
-      className={`my-4 flex border items-center gap-2 bg-gradient-to-r from-green-400 to-green-600 rounded-lg shadow-xl ${className} px-3 mx-24 transition-all duration-300 `}
+      className={`my-4 flex items-center gap-2 rounded-lg border bg-gradient-to-r from-green-400 to-green-600 shadow-xl ${className} mx-24 px-3 transition-all duration-300 `}
     >
       <div className="container mx-auto flex items-center justify-between py-4">
         {/* Section gauche avec logo */}
@@ -180,22 +180,22 @@ export default function Header({ className }: HeaderProps) {
               width={90}
               height={90}
               alt="logo = image d'un chien et d'un chat"
-              className="rounded-full border-2 border-white shadow-lg hover:scale-105 transition-transform duration-300 bg-white"
+              className="rounded-full border-2 border-white bg-white shadow-lg transition-transform duration-300 hover:scale-105"
             />
           </Link>
           <nav aria-label="Navigation principale">
-            <ul className="flex flex-row space-x-12 ml-8">
+            <ul className="ml-8 flex flex-row space-x-12">
               {/* Ajout de ml-4 pour décaler le menu vers le centre */}
               {menu_navigation.map((link) => (
-                <li key={link.name} className="relative group">
+                <li key={link.name} className="group relative">
                   <Link
                     href={link.href}
                     className={`
-                      relative text-white flex items-center gap-1 
-                      after:content-[''] after:absolute after:left-0 after:right-0 
-                      after:-bottom-2 after:h-1 after:bg-amber-700 
-                      after:origin-left after:transition-transform duration-300 
-                      hover:text-amber-700 z-10 px-3 py-1
+                      relative z-10 flex items-center gap-1 
+                      px-3 py-1 text-white duration-300 
+                      after:absolute after:inset-x-0 after:-bottom-2 
+                      after:h-1 after:origin-left after:bg-amber-700 
+                      after:transition-transform after:content-[''] hover:text-amber-700
                       ${
                         isActivePath(link.href)
                           ? "text-amber-400 after:scale-x-100"
@@ -209,7 +209,7 @@ export default function Header({ className }: HeaderProps) {
                     {link.name}
                     {link.subMenu && (
                       <span
-                        className={`text-[10px] ml-0.5 transition-all duration-200 ${
+                        className={`ml-0.5 text-[10px] transition-all duration-200 ${
                           activeSubMenu === link.name ? "-rotate-180" : ""
                         }`}
                         aria-hidden="true"
@@ -221,9 +221,9 @@ export default function Header({ className }: HeaderProps) {
                   {link.subMenu && activeSubMenu === link.name && (
                     <div
                       className={`
-                        absolute left-0 w-64 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg py-2
-                        border-t-2 border-amber-500/50 transform origin-top-left transition-all duration-200 
-                        ease-out animate-dropdownFade mt-4 z-50
+                        animate-dropdownFade absolute left-0 z-50 mt-4 w-64 origin-top-left rounded-lg
+                        border-t-2 border-amber-500/50 bg-white/95 py-2 shadow-lg backdrop-blur-sm 
+                        transition-all duration-200 ease-out
                       `}
                       style={{
                         marginTop: "1.25rem",
@@ -234,14 +234,14 @@ export default function Header({ className }: HeaderProps) {
                       aria-orientation="vertical"
                       aria-labelledby={`${link.name}-menu`}
                     >
-                      <div className="absolute top-0 left-0 w-full h-4 -translate-y-full bg-transparent" />
+                      <div className="absolute left-0 top-0 h-4 w-full -translate-y-full bg-transparent" />
                       {link.subMenu.map((subLink, index) => (
                         <Link
                           key={subLink.name}
                           href={subLink.href}
                           className={`
-                            block px-5 py-3 text-gray-600 hover:bg-amber-50/80 hover:text-amber-700 
-                            transition-all duration-200 group/item relative
+                            group/item relative block px-5 py-3 text-gray-600 
+                            transition-all duration-200 hover:bg-amber-50/80 hover:text-amber-700
                             ${index === 0 ? "rounded-t-lg" : ""}
                             ${
                               index === link.subMenu.length - 1
@@ -256,7 +256,7 @@ export default function Header({ className }: HeaderProps) {
                           }}
                         >
                           <span className="relative flex items-center">
-                            <span className="absolute left-0 w-0.5 h-full bg-amber-500 scale-y-0 group-hover/item:scale-y-100 transition-transform duration-200" />
+                            <span className="absolute left-0 h-full w-0.5 scale-y-0 bg-amber-500 transition-transform duration-200 group-hover/item:scale-y-100" />
                             <span className="relative pl-3">
                               {subLink.name}
                             </span>
@@ -275,9 +275,9 @@ export default function Header({ className }: HeaderProps) {
         <div className="flex items-center space-x-4">
           {isAuthenticated ? (
             <>
-              <div className="relative group">
+              <div className="group relative">
                 <button
-                  className="flex items-center gap-2 font-semibold text-white hover:text-amber-200 transition-colors duration-200"
+                  className="flex items-center gap-2 font-semibold text-white transition-colors duration-200 hover:text-amber-200"
                   aria-haspopup="true"
                   aria-expanded={activeSubMenu === "userMenu"}
                   onClick={(e) => {
@@ -299,18 +299,18 @@ export default function Header({ className }: HeaderProps) {
 
                 {activeSubMenu === "userMenu" && (
                   <div
-                    className="absolute right-0 w-56 mt-2 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg py-2
-                      border-t-2 border-amber-500/50 transform origin-top-right transition-all duration-200 
-                      ease-out animate-dropdownFade z-50"
+                    className="animate-dropdownFade absolute right-0 z-50 mt-2 w-56 origin-top-right rounded-lg border-t-2
+                      border-amber-500/50 bg-white/95 py-2 shadow-lg backdrop-blur-sm transition-all 
+                      duration-200 ease-out"
                     role="menu"
                   >
                     <Link
                       href="/profil"
-                      className="flex items-center px-4 py-2 text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition-colors duration-200"
+                      className="flex items-center px-4 py-2 text-gray-700 transition-colors duration-200 hover:bg-amber-50 hover:text-amber-700"
                       role="menuitem"
                     >
                       <svg
-                        className="w-5 h-5 mr-3"
+                        className="mr-3 size-5"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -326,11 +326,11 @@ export default function Header({ className }: HeaderProps) {
                     </Link>
                     <Link
                       href="/profil/formulaire_post"
-                      className="flex items-center px-4 py-2 text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition-colors duration-200"
+                      className="flex items-center px-4 py-2 text-gray-700 transition-colors duration-200 hover:bg-amber-50 hover:text-amber-700"
                       role="menuitem"
                     >
                       <svg
-                        className="w-5 h-5 mr-3"
+                        className="mr-3 size-5"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -344,34 +344,14 @@ export default function Header({ className }: HeaderProps) {
                       </svg>
                       Créer un Post
                     </Link>
-                    <Link
-                      href="/dashboard/statistiques"
-                      className="flex items-center px-4 py-2 text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition-colors duration-200"
-                      role="menuitem"
-                    >
-                      <svg
-                        className="w-5 h-5 mr-3"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                        />
-                      </svg>
-                      Statistiques
-                    </Link>
-                    <div className="border-t border-gray-100 my-1"></div>
+                    <div className="my-1 border-t border-gray-100"></div>
                     <button
                       onClick={handleLogout}
-                      className="flex items-center w-full px-4 py-2 text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition-colors duration-200"
+                      className="flex w-full items-center px-4 py-2 text-gray-700 transition-colors duration-200 hover:bg-amber-50 hover:text-amber-700"
                       role="menuitem"
                     >
                       <svg
-                        className="w-5 h-5 mr-3"
+                        className="mr-3 size-5"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -392,7 +372,7 @@ export default function Header({ className }: HeaderProps) {
           ) : (
             <Link
               href="/connexion"
-              className="rounded-lg bg-green-600 px-4 py-2 text-white transition-all duration-300 hover:bg-green-200 shadow-md hover:shadow-lg hover:text-green-800"
+              className="rounded-lg bg-green-600 px-4 py-2 text-white shadow-md transition-all duration-300 hover:bg-green-200 hover:text-green-800 hover:shadow-lg"
             >
               Se connecter
             </Link>
@@ -401,7 +381,7 @@ export default function Header({ className }: HeaderProps) {
           <div className="relative">
             <span className="absolute inset-y-0 left-3 flex items-center">
               <svg
-                className="w-5 h-5 text-gray-400"
+                className="size-5 text-gray-400"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
@@ -418,7 +398,7 @@ export default function Header({ className }: HeaderProps) {
             <input
               type="text"
               placeholder="Rechercher..."
-              className="pl-10 rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition duration-300 hover:border-green-500"
+              className="rounded-lg border border-gray-300 px-4 py-2 pl-10 transition duration-300 hover:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500"
               aria-label="Barre de recherche"
             />
           </div>
