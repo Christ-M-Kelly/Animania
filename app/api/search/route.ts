@@ -1,7 +1,6 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/app/db/prisma";
+import { AnimalCategory } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
-
-const prisma = new PrismaClient();
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,7 +16,7 @@ export async function GET(request: NextRequest) {
           title?: { contains: string; mode: "insensitive" };
           content?: { contains: string; mode: "insensitive" };
         }>;
-        category?: string;
+        category?: AnimalCategory; // Changement ici : typer correctement
       }>;
     } = {
       published: true,
@@ -28,7 +27,7 @@ export async function GET(request: NextRequest) {
         title?: { contains: string; mode: "insensitive" };
         content?: { contains: string; mode: "insensitive" };
       }>;
-      category?: string;
+      category?: AnimalCategory; // Changement ici : typer correctement
     }> = [];
 
     // Ajouter la recherche par texte si présent
@@ -53,9 +52,15 @@ export async function GET(request: NextRequest) {
 
     // Ajouter le filtre par catégorie si présent
     if (category && category.trim()) {
-      conditions.push({
-        category: category.trim(),
-      });
+      // Valider et convertir la catégorie
+      const validCategories = Object.values(AnimalCategory);
+      const categoryUpperCase = category.trim().toUpperCase() as AnimalCategory;
+
+      if (validCategories.includes(categoryUpperCase)) {
+        conditions.push({
+          category: categoryUpperCase, // Utiliser la catégorie typée
+        });
+      }
     }
 
     // Appliquer les conditions
