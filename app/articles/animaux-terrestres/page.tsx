@@ -35,7 +35,7 @@ export default function AnimauxTerrestresPage() {
       try {
         console.log("🦁 Chargement des articles sur les animaux terrestres...");
 
-        const response = await fetch("/api/posts/category/TERRESTRES");
+        const response = await fetch("/api/posts?category=TERRESTRES");
 
         if (!response.ok) {
           throw new Error(`Erreur HTTP: ${response.status}`);
@@ -44,14 +44,18 @@ export default function AnimauxTerrestresPage() {
         const data = await response.json();
 
         if (data.success) {
-          setPosts(data.posts);
-          console.log(`✅ ${data.posts.length} articles chargés`);
+          const publishedPosts = (data.posts || []).filter(
+            (post: Post) => post.published === true
+          );
+          setPosts(publishedPosts);
+          console.log(`✅ ${publishedPosts.length} articles chargés`);
         } else {
-          throw new Error(data.message || "Erreur lors du chargement");
+          setPosts([]);
+          console.log("ℹ️ Aucun article dans cette catégorie");
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("❌ Erreur:", error);
-        setError(error.message);
+        setError(error instanceof Error ? error.message : "Une erreur inconnue s'est produite");
       } finally {
         setLoading(false);
       }

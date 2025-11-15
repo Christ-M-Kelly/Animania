@@ -1,6 +1,6 @@
 import { generateToken } from "@/app/api/utils/auth";
 import { prisma } from "@/app/db/prisma";
-import bcrypt from "bcryptjs";
+import bcrypt from "bcrypt";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {

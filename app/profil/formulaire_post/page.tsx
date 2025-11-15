@@ -90,13 +90,31 @@ export default function FormulairePost() {
   };
 
   const validateForm = (): string | null => {
-    if (!formData.title.trim()) return "Le titre est requis";
-    if (formData.title.length < 5)
+    if (!formData.title.trim()) {
+      return "Le titre est requis";
+    }
+    if (formData.title.trim().length < 5) {
       return "Le titre doit contenir au moins 5 caractères";
-    if (!formData.content.trim()) return "Le contenu est requis";
-    if (formData.content.length < 50)
+    }
+    if (formData.title.trim().length > 200) {
+      return "Le titre ne doit pas dépasser 200 caractères";
+    }
+
+    if (!formData.content.trim()) {
+      return "Le contenu est requis";
+    }
+    if (formData.content.trim().length < 50) {
       return "Le contenu doit contenir au moins 50 caractères";
-    if (!formData.category) return "Veuillez sélectionner une catégorie";
+    }
+
+    if (!formData.category) {
+      return "Veuillez sélectionner une catégorie";
+    }
+
+    if (formData.excerpt && formData.excerpt.trim().length > 300) {
+      return "L'extrait ne doit pas dépasser 300 caractères";
+    }
+
     return null;
   };
 
@@ -104,12 +122,16 @@ export default function FormulairePost() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      setError("Veuillez sélectionner une image valide");
+    // Validation du type de fichier
+    const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    if (!validTypes.includes(file.type)) {
+      setError("Format d'image non supporté. Utilisez JPG, PNG, WebP ou GIF");
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
+    // Validation de la taille
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
       setError("L'image ne doit pas dépasser 5MB");
       return;
     }
@@ -118,21 +140,35 @@ export default function FormulairePost() {
     setError(null);
 
     try {
-      console.log("📤 Upload de l'image:", file.name);
+      console.log(
+        "📤 Upload de l'image:",
+        file.name,
+        `(${(file.size / 1024).toFixed(2)} KB)`
+      );
+
       const result = await handleUpload({
         file: file,
         input: { type: "post-image" },
       });
 
-      if (result.url) {
-        setFormData((prev) => ({ ...prev, imageUrl: result.url }));
-        console.log("✅ Image uploadée:", result.url);
-      } else {
-        throw new Error("URL d'image manquante");
+      if (!result?.url) {
+        throw new Error("URL d'image manquante dans la réponse");
       }
-    } catch (error: any) {
+
+      setFormData((prev) => ({ ...prev, imageUrl: result.url }));
+      console.log("✅ Image uploadée:", result.url);
+    } catch (error: unknown) {
       console.error("❌ Erreur upload:", error);
-      setError(`Erreur lors de l'upload: ${error.message}`);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Erreur lors de l'upload de l'image";
+      setError(`Erreur lors de l'upload: ${errorMessage}`);
+
+      // Réinitialiser l'input file
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     } finally {
       setUploadingImage(false);
     }
@@ -147,34 +183,46 @@ export default function FormulairePost() {
 
   // Fonction pour obtenir ou créer un utilisateur
   const getOrCreateAuthor = async (): Promise<string> => {
-    // Si utilisateur connecté, utiliser son ID
-    if (currentUser) {
-      return currentUser.id;
-    }
-
-    // Sinon, créer un utilisateur temporaire
-    console.log("👤 Création d'un utilisateur temporaire...");
-
     try {
+      // Si utilisateur connecté, utiliser son ID
+      if (currentUser?.id) {
+        console.log("✅ Utilisateur connecté trouvé:", currentUser.id);
+        return currentUser.id;
+      }
+
+      // Sinon, créer un utilisateur anonyme temporaire
+      console.log("📝 Création d'un utilisateur anonyme...");
       const response = await fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: "Utilisateur Anonyme",
-          email: `anonymous_${Date.now()}@animania.com`,
+          name: `Utilisateur_${Date.now()}`,
+          email: `user_${Date.now()}@temp.animania.com`,
+          password: crypto.randomUUID(),
+          role: "USER",
         }),
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        console.log("✅ Utilisateur temporaire créé:", result.user.id);
-        return result.user.id;
-      } else {
-        throw new Error("Impossible de créer un utilisateur temporaire");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.error || "Erreur lors de la création de l'utilisateur"
+        );
       }
-    } catch (error: any) {
-      console.error("❌ Erreur création utilisateur:", error);
-      throw new Error("Erreur de création d'utilisateur");
+
+      const result = await response.json();
+
+      if (!result.user?.id) {
+        throw new Error("ID utilisateur manquant dans la réponse");
+      }
+
+      console.log("✅ Utilisateur anonyme créé:", result.user.id);
+      return result.user.id;
+    } catch (error) {
+      console.error("❌ Erreur getOrCreateAuthor:", error);
+      throw new Error(
+        error instanceof Error ? error.message : "Impossible de créer un auteur"
+      );
     }
   };
 
@@ -182,6 +230,7 @@ export default function FormulairePost() {
     const validationError = validateForm();
     if (validationError) {
       setError(validationError);
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
 
@@ -192,6 +241,10 @@ export default function FormulairePost() {
     try {
       // Obtenir un ID d'auteur (connecté ou temporaire)
       const authorId = await getOrCreateAuthor();
+
+      if (!authorId) {
+        throw new Error("Impossible de créer l'auteur");
+      }
 
       console.log("📤 Envoi des données:", {
         ...formData,
@@ -219,19 +272,24 @@ export default function FormulairePost() {
 
       // Vérifier le content-type avant de parser
       const contentType = response.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
+      if (!contentType?.includes("application/json")) {
+        const text = await response.text();
+        console.error("Réponse non-JSON:", text);
         throw new Error("Erreur serveur: réponse invalide");
       }
 
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.message || `Erreur HTTP: ${response.status}`);
+        throw new Error(
+          result.message || result.error || `Erreur HTTP: ${response.status}`
+        );
       }
 
-      if (result.success) {
+      if (result.success && result.post) {
         const actionText = published ? "publié" : "enregistré en brouillon";
         setSuccess(`Article ${actionText} avec succès !`);
+        window.scrollTo({ top: 0, behavior: "smooth" });
 
         // Redirection différée
         setTimeout(() => {
@@ -240,9 +298,14 @@ export default function FormulairePost() {
       } else {
         throw new Error(result.message || "Erreur lors de la création");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("❌ Erreur:", error);
-      setError(error.message || "Erreur lors de la création de l'article");
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Erreur lors de la création de l'article";
+      setError(errorMessage);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setLoading(false);
     }

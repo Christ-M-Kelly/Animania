@@ -4,14 +4,7 @@ import Footer from "@/src/components/Footer";
 import Header from "@/src/components/Header";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import {
-  FiEdit,
-  FiEye,
-  FiLogOut,
-  FiPlusCircle,
-  FiTrash2,
-  FiUser,
-} from "react-icons/fi";
+import { FiLogOut, FiPlusCircle, FiUser } from "react-icons/fi";
 
 interface User {
   id: string;
@@ -133,20 +126,27 @@ export default function ProfilPage() {
     }
   };
 
-  const deletePost = async (postId: string, isDraft: boolean = false) => {
-    const itemType = isDraft ? "brouillon" : "article";
-
-    if (!confirm(`Êtes-vous sûr de vouloir supprimer cet ${itemType} ?`)) {
+  const deleteItem = async (id: string) => {
+    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer cet article ?`)) {
       return;
     }
 
-    const token =
-      localStorage.getItem("token") || sessionStorage.getItem("token");
-
     try {
-      const apiUrl = isDraft ? `/api/drafts/${postId}` : `/api/posts/${postId}`;
+      const token =
+        localStorage.getItem("token") || sessionStorage.getItem("token");
 
-      const response = await fetch(apiUrl, {
+      if (!token) {
+        setMessage({
+          type: "error",
+          text: "Vous devez être connecté pour effectuer cette action",
+        });
+        setTimeout(() => router.push("/connexion"), 2000);
+        return;
+      }
+
+      console.log("🗑️ Suppression de l'article:", id);
+
+      const response = await fetch(`/api/posts/${id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -154,24 +154,34 @@ export default function ProfilPage() {
         },
       });
 
+      console.log("📥 Réponse suppression:", response.status);
+
       if (response.ok) {
-        loadUserPosts(token!);
         setMessage({
           type: "success",
-          text: `${
-            itemType.charAt(0).toUpperCase() + itemType.slice(1)
-          } supprimé avec succès`,
+          text: "Article supprimé avec succès",
         });
+
+        // Retirer l'article des listes localement
+        setPublishedPosts((prev) => prev.filter((p) => p.id !== id));
+        setDraftPosts((prev) => prev.filter((p) => p.id !== id));
+
+        // Masquer le message après 3 secondes
         setTimeout(() => setMessage(null), 3000);
       } else {
-        let errorMessage = `Erreur lors de la suppression du ${itemType}`;
+        let errorMessage = "Erreur lors de la suppression";
         try {
           const contentType = response.headers.get("content-type");
-          if (contentType && contentType.includes("application/json")) {
+          if (contentType?.includes("application/json")) {
             const errorData = await response.json();
-            errorMessage = errorData.error || errorMessage;
+            errorMessage = errorData.error || errorData.message || errorMessage;
+          } else {
+            const text = await response.text();
+            console.error("Réponse non-JSON:", text);
+            errorMessage = `Erreur ${response.status}: ${response.statusText}`;
           }
         } catch (parseError) {
+          console.error("Erreur de parsing:", parseError);
           errorMessage = `Erreur ${response.status}: ${response.statusText}`;
         }
 
@@ -185,7 +195,10 @@ export default function ProfilPage() {
       console.error("❌ Erreur lors de la suppression:", error);
       setMessage({
         type: "error",
-        text: `Erreur de connexion lors de la suppression du ${itemType}`,
+        text:
+          error instanceof Error
+            ? error.message
+            : "Erreur de connexion lors de la suppression",
       });
       setTimeout(() => setMessage(null), 5000);
     }
@@ -399,7 +412,7 @@ export default function ProfilPage() {
                         <PostCardModern
                           key={post.id}
                           post={post}
-                          onDelete={deletePost}
+                          onDelete={deleteItem}
                           onEdit={editPost}
                           router={router}
                           showPublishButton={false}
@@ -432,7 +445,7 @@ export default function ProfilPage() {
                         <PostCardModern
                           key={post.id}
                           post={post}
-                          onDelete={deletePost}
+                          onDelete={deleteItem}
                           onEdit={editPost}
                           onPublish={publishDraft}
                           router={router}
@@ -494,68 +507,155 @@ function PostCardModern({
 
   return (
     <div className="flex flex-col justify-between rounded-xl border border-gray-100 p-4 shadow-sm transition-shadow duration-200 hover:shadow-md md:flex-row md:items-center md:space-x-4 dark:border-gray-700 dark:bg-gray-700">
-      <div className="flex-1">
-        <h3 className="text-lg font-bold text-gray-800 dark:text-white">
-          {post.title}
-        </h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          {getCategoryDisplayName(post.category)} • Créé le :{" "}
-          {new Date(post.createdAt).toLocaleDateString()}
-        </p>
-        
-      </div>
+      {/* Image et info */}
+      <div className="flex flex-1 items-center space-x-4">
+        {post.imageUrl && (
+          <div className="relative size-20 shrink-0 overflow-hidden rounded-lg">
+            <img
+              src={post.imageUrl}
+              alt={post.title}
+              className="size-full object-cover"
+            />
+          </div>
+        )}
 
-      <div className="mt-3 flex items-center space-x-3 md:mt-0">
-        <span
-          className={`rounded-full px-3 py-1 text-xs font-semibold ${
-            post.published
-              ? "bg-green-100 text-green-800"
-              : "bg-amber-100 text-amber-800"
-          }`}
-        >
-          {post.published ? "✅ Publié" : "📝 Brouillon"}
-        </span>
-
-        {/* Actions */}
-        <div className="flex space-x-2">
-          {post.published && (
-            <button
-              onClick={() => router.push(`/posts/${post.id}`)}
-              className="rounded-lg bg-blue-500 p-2 text-white transition-colors duration-200 hover:bg-blue-600"
-              title="Voir l'article"
-            >
-              <FiEye size={18} />
-            </button>
-          )}
-
-          <button
-            onClick={() => onEdit(post.id)}
-            className="rounded-lg bg-amber-500 p-2 text-white transition-colors duration-200 hover:bg-amber-600"
-            title="Modifier"
-          >
-            <FiEdit size={18} />
-          </button>
-
-          <button
-            onClick={() => onDelete(post.id, isDraft)}
-            className="rounded-lg bg-red-500 p-2 text-white transition-colors duration-200 hover:bg-red-600"
-            title="Supprimer"
-          >
-            <FiTrash2 size={18} />
-          </button>
-
-          {showPublishButton && onPublish && isDraft && (
-            <button
-              onClick={() => onPublish(post.id)}
-              className="rounded-lg bg-green-500 p-2 text-white transition-colors duration-200 hover:bg-green-600"
-              title="Publier"
-            >
-              <FiPlusCircle size={18} />
-            </button>
+        <div className="flex-1 overflow-hidden">
+          <h3 className="truncate text-lg font-semibold text-gray-900 dark:text-white">
+            {post.title}
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {getCategoryDisplayName(post.category)}
+          </p>
+          {isDraft && (
+            <span className="mt-1 inline-block rounded-full bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+              Brouillon
+            </span>
           )}
         </div>
+      </div>
+
+      {/* Actions avec tooltips */}
+      <div className="mt-4 flex items-center space-x-2 md:mt-0">
+        {/* Bouton Voir */}
+        <div className="group relative">
+          <button
+            onClick={() => router.push(`/posts/${post.id}`)}
+            className="rounded-lg bg-blue-500 p-2 text-white transition-all hover:scale-110 hover:bg-blue-600"
+            aria-label="Voir l'article"
+          >
+            <svg
+              className="size-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+              />
+            </svg>
+          </button>
+          {/* Tooltip */}
+          <div className="pointer-events-none absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-gray-900 px-3 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100 dark:bg-gray-700">
+            Voir l'article
+            <div className="absolute -bottom-1 left-1/2 size-2 -translate-x-1/2 rotate-45 bg-gray-900 dark:bg-gray-700"></div>
+          </div>
+        </div>
+
+        {/* Bouton Modifier */}
+        <div className="group relative">
+          <button
+            onClick={() => onEdit(post.id)}
+            className="rounded-lg bg-yellow-500 p-2 text-white transition-all hover:scale-110 hover:bg-yellow-600"
+            aria-label="Modifier l'article"
+          >
+            <svg
+              className="size-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+              />
+            </svg>
+          </button>
+          {/* Tooltip */}
+          <div className="pointer-events-none absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-gray-900 px-3 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100 dark:bg-gray-700">
+            Modifier
+            <div className="absolute -bottom-1 left-1/2 size-2 -translate-x-1/2 rotate-45 bg-gray-900 dark:bg-gray-700"></div>
+          </div>
+        </div>
+
+        {/* Bouton Supprimer */}
+        <div className="group relative">
+          <button
+            onClick={() => onDelete(post.id)}
+            className="rounded-lg bg-red-500 p-2 text-white transition-all hover:scale-110 hover:bg-red-600"
+            aria-label="Supprimer l'article"
+          >
+            <svg
+              className="size-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              />
+            </svg>
+          </button>
+          {/* Tooltip */}
+          <div className="pointer-events-none absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-gray-900 px-3 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100 dark:bg-gray-700">
+            Supprimer
+            <div className="absolute -bottom-1 left-1/2 size-2 -translate-x-1/2 rotate-45 bg-gray-900 dark:bg-gray-700"></div>
+          </div>
+        </div>
+
+        {/* Bouton Publier (si brouillon) */}
+        {showPublishButton && onPublish && (
+          <div className="group relative">
+            <button
+              onClick={() => onPublish(post.id)}
+              className="rounded-lg bg-green-500 p-2 text-white transition-all hover:scale-110 hover:bg-green-600"
+              aria-label="Publier l'article"
+            >
+              <svg
+                className="size-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            </button>
+            {/* Tooltip */}
+            <div className="pointer-events-none absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-gray-900 px-3 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100 dark:bg-gray-700">
+              Publier
+              <div className="absolute -bottom-1 left-1/2 size-2 -translate-x-1/2 rotate-45 bg-gray-900 dark:bg-gray-700"></div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
-

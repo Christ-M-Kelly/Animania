@@ -35,7 +35,7 @@ export default function AnimauxMarinsPage() {
       try {
         console.log("🐋 Chargement des articles sur les animaux marins...");
 
-        const response = await fetch("/api/posts/category/MARINS");
+        const response = await fetch("/api/posts?category=MARINS");
 
         if (!response.ok) {
           throw new Error(`Erreur HTTP: ${response.status}`);
@@ -44,10 +44,14 @@ export default function AnimauxMarinsPage() {
         const data = await response.json();
 
         if (data.success) {
-          setPosts(data.posts);
-          console.log(`✅ ${data.posts.length} articles chargés`);
+          const publishedPosts = (data.posts || []).filter(
+            (post: Post) => post.published === true
+          );
+          setPosts(publishedPosts);
+          console.log(`✅ ${publishedPosts.length} articles chargés`);
         } else {
-          throw new Error(data.message || "Erreur lors du chargement");
+          setPosts([]);
+          console.log("ℹ️ Aucun article dans cette catégorie");
         }
       } catch (error: any) {
         console.error("❌ Erreur:", error);

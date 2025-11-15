@@ -1,62 +1,174 @@
-import { getCurrentUser } from "@/app/api/utils/auth";
-import { prisma } from "@/app/db/prisma";
+import { PrismaClient } from "@prisma/client";
+import jwt from "jsonwebtoken";
 import { NextRequest, NextResponse } from "next/server";
+
+const prisma = new PrismaClient();
+
+export async function GET(request: NextRequest) {
+  try {
+    const searchParams = request.nextUrl.searchParams;
+    const limit = parseInt(searchParams.get("limit") || "100");
+    const category = searchParams.get("category");
+
+    // Vérifier si c'est une requête authentifiée pour voir les brouillons
+    const authHeader = request.headers.get("authorization");
+    let userId: string | null = null;
+    let showDrafts = false;
+
+    if (authHeader) {
+      try {
+        const token = authHeader.replace("Bearer ", "");
+        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+          userId: string;
+        };
+        userId = decoded.userId;
+        showDrafts = searchParams.get("drafts") === "true";
+      } catch (error) {
+        console.log("Token invalide ou expiré");
+      }
+    }
+
+    console.log("📥 GET /api/posts - Params:", {
+      limit,
+      category,
+      showDrafts,
+      userId,
+    });
+
+    // Construction des filtres - TOUJOURS filtrer par published pour les requêtes publiques
+    const where: any = {
+      published: true, // Par défaut, on ne montre que les articles publiés
+    };
+
+    // Si l'utilisateur demande explicitement ses brouillons ET est authentifié
+    if (showDrafts && userId) {
+      where.published = false;
+      where.authorId = userId;
+    }
+
+    if (category && category !== "all") {
+      where.category = category;
+    }
+
+    const posts = await prisma.post.findMany({
+      where,
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        _count: {
+          select: {
+            comments: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: limit,
+    });
+
+    console.log("✅ Posts récupérés:", posts.length);
+
+    return NextResponse.json({
+      success: true,
+      posts,
+      count: posts.length,
+    });
+  } catch (error) {
+    console.error("❌ Erreur GET posts:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Erreur lors de la récupération des articles",
+        message: error instanceof Error ? error.message : "Erreur inconnue",
+      },
+      { status: 500 }
+    );
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    console.log("📝 Données reçues:", body);
+    console.log("📥 Données reçues:", body);
 
-    // Vérifier l'authentification
-    const currentUser = await getCurrentUser(request);
+    let authorId = body.authorId;
 
-    let authorId = currentUser?.id;
-
-    // Si pas d'utilisateur connecté, utiliser l'authorId fourni ou créer un utilisateur temporaire
-    if (!authorId) {
-      if (body.authorId) {
-        // Vérifier que l'utilisateur existe
-        const existingUser = await prisma.user.findUnique({
-          where: { id: body.authorId },
-        });
-
-        if (existingUser) {
-          authorId = body.authorId;
-        } else {
-          return NextResponse.json(
-            {
-              success: false,
-              message: "Utilisateur spécifié non trouvé",
-            },
-            { status: 404 }
-          );
-        }
-      } else {
-        return NextResponse.json(
-          {
-            success: false,
-            message: "Authentification requise",
-          },
-          { status: 401 }
-        );
+    // Vérification du token si présent
+    const authHeader = request.headers.get("authorization");
+    if (authHeader) {
+      try {
+        const token = authHeader.replace("Bearer ", "");
+        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+          userId: string;
+        };
+        authorId = decoded.userId;
+        console.log("✅ Token valide, authorId:", authorId);
+      } catch (tokenError) {
+        console.log("⚠️ Token invalide, utilisation de l'authorId fourni");
       }
     }
 
+    // Validation des données requises
     const { title, content, category, published = false } = body;
 
-    if (!title || !content || !category) {
+    if (!title?.trim()) {
       return NextResponse.json(
         {
           success: false,
-          message: "Données manquantes",
-          required: ["title", "content", "category"],
-          received: {
-            title: !!title,
-            content: !!content,
-            category: !!category,
-          },
+          message: "Le titre est requis",
         },
         { status: 400 }
+      );
+    }
+
+    if (!content?.trim()) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Le contenu est requis",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!category) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "La catégorie est requise",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!authorId) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "L'auteur est requis",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Vérifier que l'auteur existe
+    const authorExists = await prisma.user.findUnique({
+      where: { id: authorId },
+    });
+
+    if (!authorExists) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Auteur non trouvé",
+        },
+        { status: 404 }
       );
     }
 
@@ -68,7 +180,7 @@ export async function POST(request: NextRequest) {
         excerpt: body.excerpt?.trim() || null,
         category: category,
         imageUrl: body.imageUrl || null,
-        published: published,
+        published: Boolean(published),
         authorId: authorId,
       },
       include: {
@@ -82,95 +194,39 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const statusMessage = published
-      ? "Article publié avec succès"
-      : "Brouillon enregistré avec succès";
-    console.log(`✅ ${statusMessage}:`, post.id);
+    console.log(
+      "✅ Post créé avec succès:",
+      post.id,
+      "- Publié:",
+      post.published
+    );
 
     return NextResponse.json(
       {
         success: true,
-        message: statusMessage,
-        post: post,
-        isDraft: !published,
+        message: "Article créé avec succès",
+        post,
       },
       { status: 201 }
     );
-  } catch (error: any) {
-    console.error("❌ Erreur création post:", error);
+  } catch (error) {
+    console.error("❌ Erreur lors de la création du post:", error);
 
-    if (error.code === "P2002") {
+    if (error instanceof Error) {
       return NextResponse.json(
         {
           success: false,
-          message: "Un article avec ce titre existe déjà",
+          message: "Erreur lors de la création",
+          error: error.message,
         },
-        { status: 409 }
+        { status: 500 }
       );
     }
 
     return NextResponse.json(
       {
         success: false,
-        message: "Erreur lors de la création de l'article",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
-      },
-      { status: 500 }
-    );
-  }
-}
-
-// GET pour récupérer les posts
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const published = searchParams.get("published");
-    const authorId = searchParams.get("authorId");
-    const category = searchParams.get("category");
-
-    const whereCondition: any = {};
-
-    if (published !== null) {
-      whereCondition.published = published === "true";
-    }
-
-    if (authorId) {
-      whereCondition.authorId = authorId;
-    }
-
-    if (category) {
-      whereCondition.category = category;
-    }
-
-    const posts = await prisma.post.findMany({
-      where: whereCondition,
-      include: {
-        author: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-
-    return NextResponse.json({
-      success: true,
-      posts: posts,
-      count: posts.length,
-    });
-  } catch (error: any) {
-    console.error("❌ Erreur récupération posts:", error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Erreur lors de la récupération des articles",
+        message: "Erreur serveur inconnue",
       },
       { status: 500 }
     );

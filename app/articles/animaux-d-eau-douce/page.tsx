@@ -37,7 +37,7 @@ export default function AnimauxEauDoucePage() {
           "🐸 Chargement des articles sur les animaux d'eau douce..."
         );
 
-        const response = await fetch("/api/posts/category/EAU_DOUCE");
+        const response = await fetch("/api/posts?category=EAU_DOUCE");
 
         if (!response.ok) {
           throw new Error(`Erreur HTTP: ${response.status}`);
@@ -46,10 +46,14 @@ export default function AnimauxEauDoucePage() {
         const data = await response.json();
 
         if (data.success) {
-          setPosts(data.posts);
-          console.log(`✅ ${data.posts.length} articles chargés`);
+          const publishedPosts = (data.posts || []).filter(
+            (post: Post) => post.published === true
+          );
+          setPosts(publishedPosts);
+          console.log(`✅ ${publishedPosts.length} articles chargés`);
         } else {
-          throw new Error(data.message || "Erreur lors du chargement");
+          setPosts([]);
+          console.log("ℹ️ Aucun article dans cette catégorie");
         }
       } catch (error: any) {
         console.error("❌ Erreur:", error);

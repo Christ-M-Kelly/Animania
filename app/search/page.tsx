@@ -1,161 +1,121 @@
-import { Suspense } from "react";
-import { prisma } from "@/app/db/prisma";
-import Header from "@/src/components/Header";
-import Footer from "@/src/components/Footer";
-import Link from "next/link";
+"use client";
+
 import ArticleCard from "@/src/components/ArticleCard";
+import Footer from "@/src/components/Footer";
+import Header from "@/src/components/Header";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
-interface SearchPageProps {
-  searchParams: Promise<{ q?: string; category?: string }>;
-}
-
-async function SearchResults({
-  query,
-  category,
-}: {
-  query: string;
-  category?: string;
-}) {
-  const searchConditions: {
-    published: boolean;
-    OR: Array<{
-      title?: { contains: string; mode: "insensitive" };
-      content?: { contains: string; mode: "insensitive" };
-      excerpt?: { contains: string; mode: "insensitive" };
-    }>;
-    category?: string;
-  } = {
-    published: true,
-    OR: [
-      { title: { contains: query, mode: "insensitive" } },
-      { content: { contains: query, mode: "insensitive" } },
-      { excerpt: { contains: query, mode: "insensitive" } },
-    ],
+interface Post {
+  id: string;
+  title: string;
+  excerpt: string | null;
+  content: string;
+  imageUrl: string | null;
+  category: string;
+  published: boolean;
+  createdAt: string;
+  author: {
+    id: string;
+    name: string;
   };
-
-  if (category && category !== "all") {
-    searchConditions.category = category;
-  }
-
-  const posts = await prisma.post.findMany({
-    where: searchConditions,
-    include: {
-      author: { select: { name: true } },
-    },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-  });
-
-  if (posts.length === 0) {
-    return (
-      <div className="py-12 text-center">
-        <div className="mb-4 text-6xl">🔍</div>
-        <h2 className="mb-4 text-2xl font-bold text-gray-900">
-          Aucun résultat trouvé
-        </h2>
-        <p className="mb-6 text-gray-600">
-          Aucun article ne correspond à votre recherche "
-          <strong>{query}</strong>"
-        </p>
-        <Link
-          href="/articles"
-          className="inline-flex items-center rounded-lg bg-green-600 px-4 py-2 text-white transition-colors hover:bg-green-700"
-        >
-          Parcourir tous les articles
-        </Link>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-8">
-      {/* En-tête des résultats */}
-      <div className="text-center">
-        <h1 className="mb-4 text-3xl font-bold text-gray-900">
-          Résultats de recherche
-        </h1>
-        <p className="text-gray-600">
-          {posts.length} résultat{posts.length > 1 ? "s" : ""} trouvé
-          {posts.length > 1 ? "s" : ""} pour "
-          <strong className="text-green-600">{query}</strong>"
-        </p>
-        {category && category !== "all" && (
-          <p className="mt-2 text-sm text-gray-500">
-            dans la catégorie :{" "}
-            <span className="font-medium">{category.replace("_", " ")}</span>
-          </p>
-        )}
-      </div>
-
-      {/* Grille des résultats avec ArticleCard */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {posts.map((post) => (
-          <ArticleCard key={post.id} post={post} maxLength={120} />
-        ))}
-      </div>
-
-      {/* Pagination info (si nécessaire) */}
-      {posts.length >= 50 && (
-        <div className="py-8 text-center">
-          <p className="text-sm text-gray-500">
-            Affichage des 50 premiers résultats. Affinez votre recherche pour
-            des résultats plus précis.
-          </p>
-        </div>
-      )}
-    </div>
-  );
 }
 
-export default async function SearchPage({ searchParams }: SearchPageProps) {
-  const { q: query, category } = await searchParams;
+export default function SearchPage() {
+  const searchParams = useSearchParams();
+  const query = searchParams.get("q") || "";
+  const category = searchParams.get("category") || "";
 
-  if (!query || query.trim().length < 2) {
-    return (
-      <div className="flex min-h-screen flex-col bg-green-50">
-        <Header />
-        <main className="grow py-12">
-          <div className="mx-auto max-w-4xl px-4 text-center">
-            <div className="mb-4 text-6xl">🔍</div>
-            <h1 className="mb-4 text-3xl font-bold text-gray-900">
-              Recherche d'articles
-            </h1>
-            <p className="mb-8 text-gray-600">
-              Utilisez la barre de recherche pour trouver des articles sur les
-              animaux
-            </p>
-            <Link
-              href="/articles"
-              className="inline-flex items-center rounded-lg bg-green-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-green-700"
-            >
-              Parcourir tous les articles
-            </Link>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchSearchResults = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Construire l'URL de recherche
+        const params = new URLSearchParams();
+        if (query) params.append("q", query);
+        if (category) params.append("category", category);
+
+        const response = await fetch(`/api/search?${params.toString()}`);
+
+        if (!response.ok) {
+          throw new Error("Erreur lors de la recherche");
+        }
+
+        const data = await response.json();
+        setPosts(data.posts || []);
+      } catch (err) {
+        console.error("Erreur de recherche:", err);
+        setError(
+          err instanceof Error ? err.message : "Erreur lors de la recherche"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSearchResults();
+  }, [query, category]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-green-50">
+    <div className="flex min-h-screen flex-col">
       <Header />
-      <main className="grow py-12">
-        <div className="mx-auto max-w-6xl px-4">
-          <Suspense
-            fallback={
-              <div className="flex justify-center py-12">
-                <div className="flex items-center gap-3">
-                  <div className="size-8 animate-spin rounded-full border-b-2 border-green-600"></div>
-                  <span className="text-gray-600">Recherche en cours...</span>
-                </div>
-              </div>
-            }
-          >
-            <SearchResults query={query} category={category} />
-          </Suspense>
+
+      <main className="container mx-auto grow px-4 py-8">
+        <div className="mb-8">
+          <h1 className="mb-4 text-3xl font-bold">Résultats de recherche</h1>
+
+          {query && (
+            <p className="text-gray-600">
+              Recherche pour :{" "}
+              <span className="font-semibold">&quot;{query}&quot;</span>
+            </p>
+          )}
+
+          {category && (
+            <p className="text-gray-600">
+              Catégorie : <span className="font-semibold">{category}</span>
+            </p>
+          )}
         </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="size-12 animate-spin rounded-full border-b-2 border-gray-900"></div>
+          </div>
+        ) : error ? (
+          <div className="rounded border border-red-200 bg-red-50 px-4 py-3 text-red-700">
+            {error}
+          </div>
+        ) : posts.length === 0 ? (
+          <div className="py-20 text-center">
+            <p className="text-xl text-gray-600">
+              Aucun article trouvé pour votre recherche.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {posts.map((post) => (
+              <ArticleCard
+                key={post.id}
+                id={post.id}
+                title={post.title}
+                excerpt={post.excerpt || post.content.substring(0, 150) + "..."}
+                imageUrl={post.imageUrl || "/images/default-post.jpg"}
+                category={post.category}
+                author={post.author}
+                createdAt={post.createdAt}
+              />
+            ))}
+          </div>
+        )}
       </main>
+
       <Footer />
     </div>
   );

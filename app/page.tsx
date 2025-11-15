@@ -14,6 +14,7 @@ interface Post {
   imageUrl: string | null;
   category: string;
   views: number;
+  published?: boolean; // Ajoutez cette propriété si elle manque
   createdAt: string;
   author: {
     id: string;
@@ -25,18 +26,49 @@ interface Post {
 export default function HomePage() {
   const [latestPosts, setLatestPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
+
+  // Fix hydration error
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
     const fetchLatestPosts = async () => {
       try {
-        const response = await fetch("/api/posts?limit=6");
+        setLoading(true);
+        setError(null);
+
+        // Récupérer uniquement les 3 derniers articles PUBLIÉS
+        const response = await fetch("/api/posts?limit=3");
+
+        if (!response.ok) {
+          throw new Error("Erreur lors du chargement des articles");
+        }
+
         const data = await response.json();
 
-        if (data.success) {
-          setLatestPosts(data.posts);
+        if (data.success && data.posts) {
+          // Double vérification côté client pour être sûr
+          const publishedPosts = data.posts.filter(
+            (post: Post) => post.published === true
+          );
+          setLatestPosts(publishedPosts);
+          console.log("✅ Articles publiés chargés:", publishedPosts.length);
+        } else {
+          throw new Error("Format de réponse invalide");
         }
       } catch (error) {
-        console.error("Erreur lors du chargement des articles:", error);
+        console.error(
+          "Erreur lors du chargement des derniers articles:",
+          error
+        );
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Impossible de charger les articles"
+        );
       } finally {
         setLoading(false);
       }
@@ -78,7 +110,6 @@ export default function HomePage() {
       color: "from-teal-600 to-cyan-600",
       link: "/articles/animaux-eau-douce",
     },
-    
   ];
 
   return (
@@ -90,28 +121,30 @@ export default function HomePage() {
         <section className="relative overflow-hidden bg-gradient-to-r from-green-400 via-green-600 to-blue-600 py-20 text-white md:py-32">
           <div className="absolute inset-0 bg-black/10"></div>
 
-          {/* Particules animées */}
-          <div className="absolute inset-0 overflow-hidden">
-            {[...Array(20)].map((_, i) => (
-              <motion.div
-                key={i}
-                className="absolute size-2 rounded-full bg-white/20"
-                initial={{
-                  x: Math.random() * 100 + "%",
-                  y: Math.random() * 100 + "%",
-                }}
-                animate={{
-                  y: ["-20%", "120%"],
-                  opacity: [0, 1, 0],
-                }}
-                transition={{
-                  duration: Math.random() * 10 + 10,
-                  repeat: Infinity,
-                  delay: Math.random() * 5,
-                }}
-              />
-            ))}
-          </div>
+          {/* Particules animées - seulement côté client */}
+          {isClient && (
+            <div className="absolute inset-0 overflow-hidden">
+              {[...Array(20)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  className="absolute size-2 rounded-full bg-white/20"
+                  initial={{
+                    x: Math.random() * 100 + "%",
+                    y: Math.random() * 100 + "%",
+                  }}
+                  animate={{
+                    y: ["-20%", "120%"],
+                    opacity: [0, 1, 0],
+                  }}
+                  transition={{
+                    duration: Math.random() * 10 + 10,
+                    repeat: Infinity,
+                    delay: Math.random() * 5,
+                  }}
+                />
+              ))}
+            </div>
+          )}
 
           <div className="container relative mx-auto px-4">
             <div className="mx-auto max-w-4xl text-center">
