@@ -1,9 +1,22 @@
+// app/api/drafts/[id]/route.ts
+
 import { getCurrentUser } from "@/app/api/utils/auth";
 import { prisma } from "@/app/db/prisma";
 import jwt from "jsonwebtoken";
 import { NextRequest, NextResponse } from "next/server";
 
-const JWT_SECRET = process.env.JWT_SECRET!;
+const JWT_SECRET = process.env.JWT_SECRET; // Assurez-vous que JWT_SECRET est disponible
+
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET n'est pas défini");
+}
+
+// Définir l'interface de votre payload de token
+interface DecodedToken {
+  userId: string;
+  email: string;
+  name: string;
+}
 
 interface RouteParams {
   params: Promise<{
@@ -28,6 +41,9 @@ export async function DELETE(request: NextRequest, context: RouteParams) {
       );
     }
 
+    // Note: getCurrentUser utilise 'verifyToken' qui retourne 'JwtPayload | string | null'
+    // Nous devons nous assurer que la fonction getCurrentUser gère cela
+    // et retourne un type 'User' ou null.
     const currentUser = await getCurrentUser(request);
 
     if (!currentUser) {
@@ -40,7 +56,19 @@ export async function DELETE(request: NextRequest, context: RouteParams) {
       );
     }
 
+    // Assurez-vous que 'getCurrentUser' retourne un objet avec 'id'
+    if (!currentUser.id) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Token invalide ou utilisateur non trouvé",
+        },
+        { status: 401 }
+      );
+    }
+
     // Vérifier que le post existe et appartient à l'utilisateur
+    // Note: Le modèle est 'post' mais nous gérons un 'draft' (published: false)
     const post = await prisma.post.findFirst({
       where: {
         id: id,
@@ -50,6 +78,8 @@ export async function DELETE(request: NextRequest, context: RouteParams) {
     });
 
     if (!post) {
+      // Tentative de suppression d'un brouillon dans la table 'Draft' si elle existe encore
+      // D'après votre schéma, il n'y a plus de table Draft, donc on s'arrête ici.
       return NextResponse.json(
         {
           success: false,
@@ -59,7 +89,7 @@ export async function DELETE(request: NextRequest, context: RouteParams) {
       );
     }
 
-    // Supprimer le brouillon
+    // Supprimer le brouillon (Post non publié)
     await prisma.post.delete({
       where: { id: id },
     });
@@ -70,7 +100,7 @@ export async function DELETE(request: NextRequest, context: RouteParams) {
       success: true,
       message: "Brouillon supprimé avec succès",
     });
-  } catch (error: unknown) {
+  } catch (error: any) {
     console.error("❌ Erreur suppression brouillon:", error);
 
     return NextResponse.json(
@@ -101,25 +131,23 @@ export async function GET(
 
     const token = authHeader.substring(7);
 
-    let decoded;
+    let decoded: DecodedToken; // Utiliser l'interface
     try {
-      decoded = jwt.verify(token, JWT_SECRET) as {
-        userId: string;
-        email: string;
-        name: string;
-      };
-    } catch {
+      // MODIFICATION ICI: Utiliser 'as unknown as DecodedToken'
+      decoded = jwt.verify(token, JWT_SECRET) as unknown as DecodedToken;
+    } catch (jwtError) {
       return NextResponse.json(
         { error: "Token d'authentification invalide" },
         { status: 401 }
       );
     }
 
-    // Utiliser le modèle Post au lieu de Draft (qui n'existe pas dans le schéma)
+    // NOTE: Votre schéma n'a plus de table 'Draft'.
+    // Cette fonction devrait chercher dans la table 'Post' avec published: false.
     const draft = await prisma.post.findUnique({
       where: {
         id: id,
-        published: false, // S'assurer que c'est un brouillon
+        published: false, // Chercher un brouillon
       },
       include: {
         author: {
@@ -138,6 +166,7 @@ export async function GET(
     }
 
     if (draft.authorId !== decoded.userId) {
+      // Fonctionne maintenant
       return NextResponse.json(
         { error: "Vous n'êtes pas autorisé à voir ce brouillon" },
         { status: 403 }
