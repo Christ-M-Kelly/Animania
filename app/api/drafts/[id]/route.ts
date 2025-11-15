@@ -1,6 +1,9 @@
 import { getCurrentUser } from "@/app/api/utils/auth";
 import { prisma } from "@/app/db/prisma";
+import jwt from "jsonwebtoken";
 import { NextRequest, NextResponse } from "next/server";
+
+const JWT_SECRET = process.env.JWT_SECRET!;
 
 interface RouteParams {
   params: Promise<{
@@ -67,7 +70,7 @@ export async function DELETE(request: NextRequest, context: RouteParams) {
       success: true,
       message: "Brouillon supprimé avec succès",
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("❌ Erreur suppression brouillon:", error);
 
     return NextResponse.json(
@@ -105,15 +108,19 @@ export async function GET(
         email: string;
         name: string;
       };
-    } catch (jwtError) {
+    } catch {
       return NextResponse.json(
         { error: "Token d'authentification invalide" },
         { status: 401 }
       );
     }
 
-    const draft = await prisma.draft.findUnique({
-      where: { id },
+    // Utiliser le modèle Post au lieu de Draft (qui n'existe pas dans le schéma)
+    const draft = await prisma.post.findUnique({
+      where: {
+        id: id,
+        published: false, // S'assurer que c'est un brouillon
+      },
       include: {
         author: {
           select: {
