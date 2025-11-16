@@ -1,200 +1,136 @@
+import Image from "next/image";
 import Link from "next/link";
 
-export default function Footer() {
+interface FooterProps {
+  className?: string;
+}
+
+export default function Footer({ className }: FooterProps) {
+  const currentYear = new Date().getFullYear();
+
+  const socialLinks = [
+    {
+      name: "Facebook",
+      url: "https://facebook.com",
+      icon: (
+        <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" />
+      ),
+    },
+    {
+      name: "X (Twitter)",
+      url: "https://twitter.com",
+      icon: (
+        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+      ),
+    },
+    {
+      name: "Instagram",
+      url: "https://instagram.com",
+      icon: (
+        <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+      ),
+    },
+  ];
+
+  const navLinks = [
+    { name: "Accueil", href: "/" },
+    { name: "À propos", href: "/a-propos" },
+    { name: "Contact", href: "/contact" },
+  ];
+
   return (
-    <footer className="bg-gray-900 text-white">
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
+    <footer
+      className={`relative bg-gradient-to-b from-green-700 to-green-900 py-6 ${
+        className || ""
+      }`}
+      role="contentinfo"
+    >
+      <div className="container mx-auto max-w-7xl px-4">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           {/* Logo et description */}
-          <div className="col-span-1 md:col-span-2 lg:col-span-1">
+          <div className="flex flex-col items-center space-y-3 md:items-start">
             <Link
               href="/"
-              className="text-2xl font-bold text-green-400 transition-colors hover:text-green-300"
+              className="flex items-center justify-center space-x-3 transition-opacity hover:opacity-90"
             >
-              🐾 Animania
+              <Image
+                src="/images/logo_rbg.png"
+                alt="Logo Animania - Votre portail sur le monde animal"
+                width={70} // Diminution de la taille du logo
+                height={70}
+                className="rounded-full border-2 border-green-700 bg-white shadow-lg transition-transform duration-300 hover:scale-105"
+              />
+              <h3 className="font-serif text-xl font-bold text-white">
+                Animania
+              </h3>
             </Link>
-            <p className="mt-4 text-sm leading-relaxed text-gray-300">
-              Votre communauté dédiée aux animaux. Partagez, découvrez et
-              connectez-vous avec d&apos;autres passionnés d&apos;animaux.
+            <p className="text-center text-sm text-gray-300 md:text-left">
+              Où chaque créature a une histoire à raconter !
             </p>
-
-            {/* Réseaux sociaux */}
-            <div className="mt-6 flex space-x-4">
-              <a
-                href="#"
-                className="text-gray-400 transition-colors hover:text-green-400"
-                aria-label="Facebook"
-              >
-                <svg className="size-6" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                </svg>
-              </a>
-              <a
-                href="#"
-                className="text-gray-400 transition-colors hover:text-green-400"
-                aria-label="Instagram"
-              >
-                <svg className="size-6" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 6.62 5.367 11.987 11.988 11.987c6.62 0 11.987-5.367 11.987-11.987C24.014 5.367 18.637.001 12.017.001zM8.449 16.988c-1.297 0-2.448-.49-3.316-1.357C4.265 14.764 3.776 13.613 3.776 12.316c0-1.297.49-2.448 1.357-3.316C5.999 8.133 7.15 7.644 8.449 7.644c1.297 0 2.448.49 3.316 1.357c.867.867 1.357 2.018 1.357 3.316c0 1.297-.49 2.448-1.357 3.316C10.897 16.498 9.746 16.988 8.449 16.988z" />
-                </svg>
-              </a>
-              <a
-                href="#"
-                className="text-gray-400 transition-colors hover:text-green-400"
-                aria-label="Twitter"
-              >
-                <svg className="size-6" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z" />
-                </svg>
-              </a>
-            </div>
           </div>
 
           {/* Navigation */}
-          <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-400">
+          <div className="flex flex-col items-center md:items-start">
+            <h4 className="mb-3 text-lg font-semibold text-white">
               Navigation
-            </h3>
-            <ul className="mt-4 space-y-3">
-              <li>
-                <Link
-                  href="/"
-                  className="text-sm text-gray-300 transition-colors hover:text-green-400"
-                >
-                  Accueil
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/posts"
-                  className="text-sm text-gray-300 transition-colors hover:text-green-400"
-                >
-                  Articles
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/galerie"
-                  className="text-sm text-gray-300 transition-colors hover:text-green-400"
-                >
-                  Galerie
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/a-propos"
-                  className="text-sm text-gray-300 transition-colors hover:text-green-400"
-                >
-                  À propos
-                </Link>
-              </li>
-            </ul>
+            </h4>
+            <nav>
+              <ul className="flex flex-col space-y-2">
+                {navLinks.map((link) => (
+                  <li key={link.name}>
+                    <Link
+                      href={link.href}
+                      className="text-sm text-gray-300 transition-colors duration-200 hover:text-green-300 hover:underline"
+                    >
+                      {link.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
           </div>
 
-          {/* Catégories */}
-          <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-400">
-              Catégories
-            </h3>
-            <ul className="mt-4 space-y-3">
-              <li>
-                <Link
-                  href="/posts?category=CHIENS"
-                  className="text-sm text-gray-300 transition-colors hover:text-green-400"
-                >
-                  Chiens
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/posts?category=CHATS"
-                  className="text-sm text-gray-300 transition-colors hover:text-green-400"
-                >
-                  Chats
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/posts?category=OISEAUX"
-                  className="text-sm text-gray-300 transition-colors hover:text-green-400"
-                >
-                  Oiseaux
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/posts?category=AUTRES"
-                  className="text-sm text-gray-300 transition-colors hover:text-green-400"
-                >
-                  Autres
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Support */}
-          <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-400">
-              Support
-            </h3>
-            <ul className="mt-4 space-y-3">
-              <li>
-                <Link
-                  href="/contact"
-                  className="text-sm text-gray-300 transition-colors hover:text-green-400"
-                >
-                  Contact
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/aide"
-                  className="text-sm text-gray-300 transition-colors hover:text-green-400"
-                >
-                  Aide
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/conditions"
-                  className="text-sm text-gray-300 transition-colors hover:text-green-400"
-                >
-                  Conditions d&apos;utilisation
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/confidentialite"
-                  className="text-sm text-gray-300 transition-colors hover:text-green-400"
-                >
-                  Politique de confidentialité
-                </Link>
-              </li>
-            </ul>
+          {/* Réseaux sociaux */}
+          <div className="flex flex-col items-center md:items-start">
+            <h4 className="mb-3 text-lg font-semibold text-white">
+              Suivez-nous
+            </h4>
+            <div className="flex space-x-4">
+              {socialLinks.map((social) => (
+                <div key={social.name} className="group relative">
+                  <a
+                    href={social.url}
+                    className="text-gray-300 transition-all duration-200 hover:scale-110 hover:text-white"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <span className="sr-only">{social.name}</span>
+                    <svg
+                      className="size-5" // Réduction de la taille des icônes sociales
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-label={`Icône ${social.name}`}
+                    >
+                      {social.icon}
+                    </svg>
+                  </a>
+                  <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-white px-2 py-1 text-xs text-black opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                    {social.name}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
         {/* Séparateur */}
-        <div className="mt-8 border-t border-gray-700 pt-8">
-          <div className="flex flex-col items-center justify-between md:flex-row">
-            <p className="text-sm text-gray-400">
-              © 2024 Animania. Tous droits réservés.
-            </p>
-            <div className="mt-4 flex space-x-6 md:mt-0">
-              <Link
-                href="/mentions-legales"
-                className="text-sm text-gray-400 transition-colors hover:text-green-400"
-              >
-                Mentions légales
-              </Link>
-              <Link
-                href="/cookies"
-                className="text-sm text-gray-400 transition-colors hover:text-green-400"
-              >
-                Cookies
-              </Link>
-            </div>
-          </div>
+        <div className="my-6 h-px w-full bg-gradient-to-r from-transparent via-gray-400 to-transparent"></div>
+
+        {/* Copyright */}
+        <div className="text-center">
+          <p className="text-xs text-gray-300">
+            &copy; {currentYear} Animania - Tous droits réservés
+          </p>
         </div>
       </div>
     </footer>

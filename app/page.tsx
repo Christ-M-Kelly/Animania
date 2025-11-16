@@ -100,7 +100,7 @@ export default function HomePage() {
       icon: "🦅",
       description: "Explorez le monde fascinant des oiseaux",
       color: "from-sky-600 to-blue-600",
-      link: "/articles/animaux-aeriens",
+      link: "/articles/animaux-aerien",
     },
     {
       id: "EAU_DOUCE",
@@ -108,7 +108,7 @@ export default function HomePage() {
       icon: "🐸",
       description: "Les habitants des rivières et lacs",
       color: "from-teal-600 to-cyan-600",
-      link: "/articles/animaux-eau-douce",
+      link: "/articles/animaux-d-eau-douce",
     },
   ];
 
