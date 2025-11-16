@@ -48,6 +48,7 @@ async function GalleryContent() {
         .catch(() => []),
     ]);
 
+    // Filtrer les posts avec imageUrl non null et mapper correctement
     const galleryItems = posts
       .filter(
         (post): post is typeof post & { imageUrl: string } =>
