@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/src/hooks/useAuth";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 interface PostStatsProps {
   postId: string;
@@ -15,127 +15,67 @@ export default function PostStats({
   initialLikes,
   initialViews,
 }: PostStatsProps) {
-  const { user, loading } = useAuth();
+  // Correction : utiliser getUser() au lieu de user
+  const auth = useAuth();
+  const currentUser = auth.getUser();
+  const isAuthenticated = auth.isAuthenticated();
+
   const router = useRouter();
   const [likes, setLikes] = useState(initialLikes);
-  const [views, setViews] = useState(initialViews);
-  const [isLiked, setIsLiked] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
-
-  // Incrémenter les vues au chargement (si authentifié)
-  useEffect(() => {
-    const incrementView = async () => {
-      if (!user) return;
-
-      try {
-        const response = await fetch(`/api/posts/${postId}/view`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
-        if (response.ok) {
-          const data = await response.json();
-          if (!data.alreadyViewed) {
-            setViews(data.views);
-          }
-        }
-      } catch (error) {
-        console.error("Erreur lors de l'incrémentation des vues:", error);
-      }
-    };
-
-    incrementView();
-  }, [postId, user]);
-
-  // Vérifier si l'utilisateur a liké
-  useEffect(() => {
-    const checkLiked = async () => {
-      if (!user) return;
-
-      try {
-        const response = await fetch(`/api/posts/${postId}/like`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setIsLiked(data.liked);
-        }
-      } catch (error) {
-        console.error("Erreur lors de la vérification du like:", error);
-      }
-    };
-
-    checkLiked();
-  }, [postId, user]);
+  const [views] = useState(initialViews);
+  const [isLiking, setIsLiking] = useState(false);
 
   const handleLike = async () => {
-    if (!user) {
-      if (
-        confirm(
-          "Vous devez être connecté pour aimer un article. Voulez-vous vous connecter ?"
-        )
-      ) {
-        router.push("/connexion");
-      }
+    if (!isAuthenticated) {
+      router.push("/connexion");
       return;
     }
 
-    setActionLoading(true);
+    if (isLiking) return;
+
     try {
+      setIsLiking(true);
       const response = await fetch(`/api/posts/${postId}/like`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${auth.getToken()}`,
+          "Content-Type": "application/json",
         },
       });
 
       if (response.ok) {
         const data = await response.json();
         setLikes(data.likes);
-        setIsLiked(data.liked);
       }
     } catch (error) {
       console.error("Erreur lors du like:", error);
     } finally {
-      setActionLoading(false);
+      setIsLiking(false);
     }
   };
 
   return (
-    <div className="mt-8 flex items-center gap-6 border-t border-gray-200 pt-6">
-      {/* Bouton Like */}
+    <div className="flex items-center gap-4 text-sm text-gray-600">
       <button
         onClick={handleLike}
-        disabled={actionLoading || loading}
-        className={`flex items-center gap-2 rounded-full px-4 py-2 transition-all ${
-          isLiked
-            ? "bg-red-100 text-red-600 hover:bg-red-200"
-            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-        } ${actionLoading || loading ? "cursor-not-allowed opacity-50" : ""}`}
+        disabled={isLiking}
+        className={`flex items-center gap-1 transition-colors ${
+          isLiking ? "cursor-not-allowed opacity-50" : "hover:text-red-600"
+        }`}
       >
-        <svg
-          className={`size-5 ${isLiked ? "fill-current" : ""}`}
-          fill={isLiked ? "currentColor" : "none"}
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
+        <svg className="size-4" fill="currentColor" viewBox="0 0 20 20">
           <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+            fillRule="evenodd"
+            d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"
+            clipRule="evenodd"
           />
         </svg>
-        <span className="font-semibold">{likes}</span>
+        <span>{likes}</span>
       </button>
 
-      {/* Compteur de vues */}
-      <div className="flex items-center gap-2 text-gray-600">
+      <div className="flex items-center gap-1">
         <svg
-          className="size-5"
+          className="size-4"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -153,13 +93,11 @@ export default function PostStats({
             d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
           />
         </svg>
-        <span className="font-semibold">{views}</span>
+        <span>{views} vues</span>
       </div>
 
-      {!user && (
-        <p className="text-sm text-gray-500">
-          Connectez-vous pour voir et aimer les articles
-        </p>
+      {currentUser && (
+        <div className="text-xs">Connecté en tant que {currentUser.name}</div>
       )}
     </div>
   );
