@@ -21,20 +21,6 @@ export async function uploadImageWithCustomName(
   return url;
 }
 
-export async function uploadBuffer(
-  buffer: ArrayBuffer | Uint8Array,
-  fileName: string
-): Promise<string> {
-  const blob = new Blob([buffer]);
-  const { url } = await put(fileName, blob, {
-    access: "public",
-    token: process.env.BLOB_READ_WRITE_TOKEN!,
-  });
-
-  return url;
-}
-
-// Fonction pour uploader un Blob avec nom personnalisé obligatoire
 export async function uploadBlob(
   blob: Blob,
   fileName: string
@@ -47,20 +33,15 @@ export async function uploadBlob(
   return url;
 }
 
-// Fonction pour uploader depuis un Buffer Node.js
-export async function uploadFromBuffer(
-  buffer: Buffer,
-  fileName: string
-): Promise<string> {
-  // Convertir le Buffer Node.js en ArrayBuffer
-  const arrayBuffer = new ArrayBuffer(buffer.length);
-  const view = new Uint8Array(arrayBuffer);
-  view.set(buffer);
+// Fonction utilitaire pour créer un nom de fichier unique
+export function generateUniqueFileName(originalName: string): string {
+  const timestamp = Date.now();
+  const cleanName = originalName.replace(/[^a-zA-Z0-9.-]/g, "_");
+  return `${timestamp}-${cleanName}`;
+}
 
-  const { url } = await put(fileName, arrayBuffer, {
-    access: "public",
-    token: process.env.BLOB_READ_WRITE_TOKEN!,
-  });
-
-  return url;
+// Fonction pour uploader avec nom auto-généré
+export async function uploadImageWithTimestamp(file: File): Promise<string> {
+  const uniqueName = generateUniqueFileName(file.name);
+  return uploadImageWithCustomName(file, uniqueName);
 }
