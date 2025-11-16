@@ -6,19 +6,22 @@ import Header from "@/src/components/Header";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
+// Mise à jour du type Author pour correspondre aux données de l'API
+interface Author {
+  id: string;
+  name: string;
+  email: string;
+}
+
 interface Post {
   id: string;
   title: string;
-  excerpt: string | null;
-  content: string;
+  excerpt: string;
   imageUrl: string | null;
   category: string;
-  published: boolean;
+  author: Author;
   createdAt: string;
-  author: {
-    id: string;
-    name: string;
-  };
+  views?: number; // Optionnel car pas toujours présent
 }
 
 export default function SearchPage() {
@@ -99,17 +102,18 @@ export default function SearchPage() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {posts.map((post) => (
               <ArticleCard
                 key={post.id}
                 id={post.id}
                 title={post.title}
-                excerpt={post.excerpt || post.content.substring(0, 150) + "..."}
+                excerpt={post.excerpt}
                 imageUrl={post.imageUrl || "/images/default-post.jpg"}
                 category={post.category}
                 author={post.author}
                 createdAt={post.createdAt}
+                views={post.views || 0}
               />
             ))}
           </div>
