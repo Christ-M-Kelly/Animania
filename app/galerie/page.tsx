@@ -48,12 +48,16 @@ async function GalleryContent() {
         .catch(() => []),
     ]);
 
-    // Filtrer les posts avec imageUrl non null et mapper correctement
-    const galleryItems = posts
-      .filter(
-        (post): post is typeof post & { imageUrl: string } =>
-          post.imageUrl !== null
-      )
+    // Filtrer et mapper les posts avec imageUrl non null
+    const galleryItems: GalleryItem[] = posts
+      .filter((post) => post.imageUrl !== null)
+      .map((post) => ({
+        id: post.id,
+        title: post.title,
+        imageUrl: post.imageUrl!, // Assertion non-null après filtre
+        category: post.category,
+        author: post.author,
+      }))
       .map((post) => ({
         ...post,
         imageUrl:
