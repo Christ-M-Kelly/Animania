@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 10, "column": 0}, "map": {"version":3,"sources":["file:///Users/moaye_kelly/WebstormProjects/Animania/app/db/prisma.ts"],"sourcesContent":["import { PrismaClient } from \"@prisma/client\";\n\ndeclare global {\n  var __prisma: PrismaClient | undefined;\n}\n\n// Configuration pour MongoDB avec logs détaillés\nconst prisma =\n  globalThis.__prisma ??\n  new PrismaClient({\n    log: [\"query\", \"info\", \"warn\", \"error\"],\n    datasources: {\n      db: {\n        url: process.env.DATABASE_URL,\n      },\n    },\n  });\n\nif (process.env.NODE_ENV !== \"production\") {\n  globalThis.__prisma = prisma;\n}\n\nexport { prisma };\n"],"names":[],"mappings":";;;;AAAA;;AAMA,iDAAiD;AACjD,MAAM,SACJ,WAAW,QAAQ,IACnB,IAAI,6IAAY,CAAC;IACf,KAAK;QAAC;QAAS;QAAQ;QAAQ;KAAQ;IACvC,aAAa;QACX,IAAI;YACF,KAAK,QAAQ,GAAG,CAAC,YAAY;QAC/B;IACF;AACF;AAEF,wCAA2C;IACzC,WAAW,QAAQ,GAAG;AACxB"}}]
+}

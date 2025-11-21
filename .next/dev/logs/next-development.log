@@ -1,0 +1,16 @@
+[00:00:00.458] Server  LOG      ✓ Ready in 292ms
+[00:00:08.446] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:08.687] Server  LOG     📥 GET /api/posts - Params: {}
+[00:00:08.985] Server  LOG     ✅ Posts récupérés: 3
+[00:00:09.090] Browser LOG     ✅ Articles publiés chargés: 3
+[00:00:15.514] Browser WARN    Detected `scroll-behavior: smooth` on the `<html>` element. To disable smooth scrolling during route transitions, add `data-scroll-behavior="smooth"` to your <html> element. Learn more: https://nextjs.org/docs/messages/missing-data-scroll-behavior
+[00:00:15.595] Server  LOG     prisma:query "db.posts.aggregate([ { $match: { $expr: { $and: [ { $ne: [ \"$imageUrl\", { $literal: null, }, ], }, { $ne: [ \"$imageUrl\", \"$$REMOVE\", ], }, ], }, }, }, { $sort: { createdAt: -1, }, }, { $project: { _id: 1, title: 1, imageUrl: 1, category: 1, authorId: 1, }, }, ])"
+[00:00:15.606] Server  LOG     prisma:query "db.users.aggregate([ { $match: { $expr: { $and: [ { $or: [ { $eq: [ \"$_id\", { $literal: ObjectId(\"6918e754b0d34ccfc3e3dcef\"), }, ], }, { $eq: [ \"$_id\", { $literal: ObjectId(\"691891118271355c599546ac\"), }, ], }, ], }, { $ne: [ \"$_id\", \"$$REMOVE\", ], }, ], }, }, }, { $project: { _id: 1, name: 1, }, }, ])"
+[00:00:15.810] Browser WARN    Image with src "https://xw8oikocbczvr6wo.public.blob.vercel-storage.com/post-image-girafe-F6Zmdy92cGpwn3Mpl7PpTqvvUF6OVP.webp" is using quality "90" which is not configured in images.qualities [75]. Please update your config to [75, 90].
+Read more: https://nextjs.org/docs/messages/next-image-unconfigured-qualities
+[00:00:15.810] Browser WARN    Image with src "https://xw8oikocbczvr6wo.public.blob.vercel-storage.com/post-image-Requin%20Blanc%20AP5A9973-lyUzBoC5uyUAoOrG705YFDVOyKCiBW.jpg" is using quality "90" which is not configured in images.qualities [75]. Please update your config to [75, 90].
+Read more: https://nextjs.org/docs/messages/next-image-unconfigured-qualities
+[00:00:15.810] Browser WARN    Image with src "https://xw8oikocbczvr6wo.public.blob.vercel-storage.com/post-image-axololt-gYn5DedkUXb5E3jX5zkChtzwrPqLa2.jpg" is using quality "90" which is not configured in images.qualities [75]. Please update your config to [75, 90].
+Read more: https://nextjs.org/docs/messages/next-image-unconfigured-qualities
+[00:00:15.810] Browser WARN    Image with src "https://xw8oikocbczvr6wo.public.blob.vercel-storage.com/post-image-Portrait%20d%27Aigle%20Royal-6MxkKNx80lApsah1GB46Cqh6BMwsd9.jpg" is using quality "90" which is not configured in images.qualities [75]. Please update your config to [75, 90].
+Read more: https://nextjs.org/docs/messages/next-image-unconfigured-qualities
